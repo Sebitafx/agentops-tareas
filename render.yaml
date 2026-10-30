@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: agentops-receiver
+    runtime: docker
+    plan: free
+    autoDeployTrigger: 'off'
+    healthCheckPath: /health
+    envVars:
+      - key: SERVICE_ROLE
+        value: receiver
+      - key: META_VERIFY_TOKEN
+        sync: false

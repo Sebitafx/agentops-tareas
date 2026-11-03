@@ -32,8 +32,8 @@ Nunca compartir tokens, archivos `.env` ni claves privadas en el repositorio.
 
 ```powershell
 .venv/Scripts/python -m pytest -q
-.venv/Scripts/python -m ruff check bootstrap tests
-.venv/Scripts/python -m ruff format --check bootstrap tests
+.venv/Scripts/python -m ruff check bootstrap harness tests
+.venv/Scripts/python -m ruff format --check bootstrap harness tests
 ```
 
 ## Publicar el servicio minimo en Render
@@ -73,7 +73,7 @@ ni cambiar de plan para esta demo sin revisar primero sus condiciones y cuotas.
 
 ## Proximas etapas
 
-1. Verificar acceso gratuito al modelo Gemini y habilitar GitHub App para los agentes.
+1. Verificar acceso al proveedor IA y habilitar GitHub App para los agentes.
 2. Implementar y validar respuesta desde nuestro servidor por WhatsApp.
 3. Construir CRUD, filtros y pruebas de la aplicacion de tareas.
 4. Implementar arnes, revision y correcciones aisladas.
@@ -88,3 +88,6 @@ Paginas publicas: `/privacy` y `/data-deletion`. Ver
 
 El workflow **Gemini API check** verifica acceso al modelo con una peticion
 sintetica desde main. Configuracion y limites en [verificacion Gemini](docs/gemini.md).
+El primer intento remoto fallo por timeout de red, sin confirmar la clave ni la cuota.
+Se agrega **Groq API check** como alternativa, con el secreto independiente GROQ_API_KEY.
+Ver [verificacion Groq](docs/groq.md). Ninguno procesa mensajes reales de WhatsApp.

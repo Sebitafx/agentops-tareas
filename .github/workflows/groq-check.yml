@@ -1,0 +1,28 @@
+name: Groq API check
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/groq-check.yml']
+permissions:
+  contents: read
+concurrency:
+  group: groq-api-check
+  cancel-in-progress: false
+jobs:
+  check-groq:
+    if: github.repository == 'Sebitafx/agentops-tareas' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Check catalog and one synthetic generation
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_MODEL: openai/gpt-oss-120b
+        run: python -m harness.groq_check

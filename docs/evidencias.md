@@ -71,3 +71,17 @@ tokens ni cargas originales de mensajes en este repositorio publico.
 - Validacion local con respuestas simuladas: 72 pruebas aprobadas, cobertura 89.98%.
 - La primera ejecucion remota debe confirmar por separado acceso real y generacion;
   las pruebas locales no certifican validez de la clave ni cuota de la cuenta.
+
+## 3 de noviembre de 2026 — resultado Gemini y alternativa Groq
+
+- Bootstrap CI del preflight Gemini finalizo con success.
+- Gemini API check fallo por NETWORK_ERROR tras 30 segundos, sin HTTP status.
+  No se confirmo acceso, validez de clave, cuota ni saturacion del proveedor.
+- El conector GitHub no tuvo permiso para reejecutar el job (403). La revision
+  automatica bloqueo usar credenciales de Git para suplir ese permiso; esa accion
+  no se ejecuto. Cualquier reintento debe usar la UI o un mecanismo autorizado.
+- El participante eligio probar Groq y mostro GROQ_API_KEY guardado en Actions.
+- Se agrega control acotado de catalogo y generacion, compartiendo el transporte
+  con Gemini sin habilitar fallback ni procesamiento de mensajes personales.
+- 93 pruebas locales aprobadas, con PostgreSQL real y proveedores simulados;
+  cobertura combinada 91.04%. La validacion real de Groq se documentara por separado.

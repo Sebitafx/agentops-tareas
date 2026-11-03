@@ -5,6 +5,7 @@ import urllib.error
 import pytest
 
 from harness import gemini_check as check
+from harness import provider_http
 
 
 def metadata():
@@ -31,7 +32,7 @@ def mock_api(monkeypatch, replies):
     class Opener:
         open = staticmethod(open_request)
 
-    monkeypatch.setattr(check.urllib.request, "build_opener", lambda *args: Opener())
+    monkeypatch.setattr(provider_http.urllib.request, "build_opener", lambda *args: Opener())
     return calls
 
 
@@ -93,7 +94,7 @@ def test_http_errors_sanitized_and_not_retried(monkeypatch, capsys, status, reas
 
 @pytest.mark.parametrize(
     "reply",
-    [b"not-json", b"[]", b"\xff", b"x" * (check.MAX_RESPONSE_BYTES + 1)],
+    [b"not-json", b"[]", b"\xff", b"x" * (provider_http.MAX_RESPONSE_BYTES + 1)],
     ids=["bad-json", "non-object", "invalid-encoding", "oversized"],
 )
 def test_invalid_responses_not_exposed(monkeypatch, reply):
@@ -152,5 +153,6 @@ def test_main_safe_output(monkeypatch, capsys):
 
 def test_redirects_do_not_forward_key():
     assert (
-        check.NoRedirect().redirect_request(None, None, 302, "", {}, "https://other-host") is None
+        provider_http.NoRedirect().redirect_request(None, None, 302, "", {}, "https://other-host")
+        is None
     )

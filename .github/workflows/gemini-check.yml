@@ -1,0 +1,28 @@
+name: Gemini API check
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/gemini-check.yml']
+permissions:
+  contents: read
+concurrency:
+  group: gemini-api-check
+  cancel-in-progress: false
+jobs:
+  check-gemini:
+    if: github.repository == 'Sebitafx/agentops-tareas' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Check model access and one synthetic generation
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: gemini-3.8-flash
+        run: python -m harness.gemini_check

@@ -46,3 +46,28 @@ tokens ni cargas originales de mensajes en este repositorio publico.
   `messages=0 ignored_phone_changes=1` y `messages=1` tras confirmar transaccion.
 - La revision de suscripcion WABA y la entrega real siguen pendientes; no declarar
   alcanzados los retos por estas pruebas de infraestructura.
+
+## 3 de noviembre de 2026 — recepcion real confirmada
+
+- GET de subscribed_apps mostro inicialmente solo la aplicacion de pruebas de Meta.
+- El participante suscribio AgentOps Tareas mediante POST y obtuvo `success: true`.
+- Un GET posterior confirmo AgentOps Tareas entre las aplicaciones suscritas a la WABA.
+- Despues de la suscripcion, el participante envio un texto nuevo desde su WhatsApp.
+- Neon devolvio `mensajes_recibidos = 1` al consultar ese texto de prueba.
+- Render mostro `stage=received` seguido de `stage=accepted messages=1 statuses=0`,
+  con todos los contadores de descarte en cero.
+- Queda verificado el recorrido real WhatsApp -> Meta -> Render -> PostgreSQL.
+- La suscripcion de la aplicacion a la WABA era la vinculacion que faltaba para
+  esta prueba, ademas de tener verificado el callback y suscrito el campo messages.
+- Sigue pendiente enviar respuestas, implementar el gestor de tareas, los agentes
+  de correccion/revision, la integracion automatica y el despliegue autonomo.
+
+## 3 de noviembre de 2026 — preflight de Gemini
+
+- El participante creo una clave dedicada y mostro GEMINI_API_KEY guardado como
+  repository secret de Actions; el valor no se compartio ni se guardo en el codigo.
+- Se agrega Gemini API check: maximo dos llamadas y un prompt sintetico, sin mensajes
+  de WhatsApp, DB ni codigo del repositorio enviado al proveedor.
+- Validacion local con respuestas simuladas: 72 pruebas aprobadas, cobertura 89.98%.
+- La primera ejecucion remota debe confirmar por separado acceso real y generacion;
+  las pruebas locales no certifican validez de la clave ni cuota de la cuenta.

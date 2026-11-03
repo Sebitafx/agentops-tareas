@@ -5,8 +5,9 @@ y revision y correccion de Python tras cada push.
 
 ## Estado real
 
-Meta ya envio un mensaje al participante autorizado y recibio su respuesta en su
-propio panel. El callback HTTPS quedo verificado en Meta y Render publico el servicio.
+Recorrido real WhatsApp -> Meta -> Render -> PostgreSQL verificado: un mensaje del
+participante autorizado quedo guardado en Neon y confirmado en los logs del receptor.
+El callback HTTPS, el campo messages y la suscripcion de la app a la WABA estan configurados.
 
 Implementado: salud, version, handshake, migracion PostgreSQL y bandeja duradera
 de mensajes con firma HMAC, lista de remitentes autorizados y deduplicacion.
@@ -72,15 +73,18 @@ ni cambiar de plan para esta demo sin revisar primero sus condiciones y cuotas.
 
 ## Proximas etapas
 
-1. Diagnosticar la entrega de mensajes reales al callback: ver
-   [diagnostico WhatsApp](docs/diagnostico-whatsapp.md).
-2. Validar persistencia de un mensaje real y respuesta desde nuestro servidor por WhatsApp.
+1. Verificar acceso gratuito al modelo Gemini y habilitar GitHub App para los agentes.
+2. Implementar y validar respuesta desde nuestro servidor por WhatsApp.
 3. Construir CRUD, filtros y pruebas de la aplicacion de tareas.
-4. Habilitar Gemini y GitHub App, arnes, revision y correcciones aisladas.
+4. Implementar arnes, revision y correcciones aisladas.
 5. Proteger main, automatizar integracion y despliegue con comprobacion del SHA.
 6. Ejecutar los dos recorridos reales y preparar evidencias y defensa.
 
 Ver [conexion y comprobacion del almacenamiento](docs/almacenamiento.md).
+Si falla una entrega, ver [diagnostico WhatsApp](docs/diagnostico-whatsapp.md).
 
 Paginas publicas: `/privacy` y `/data-deletion`. Ver
 [configuracion de privacidad y atencion de solicitudes](docs/privacidad.md).
+
+El workflow **Gemini API check** verifica acceso al modelo con una peticion
+sintetica desde main. Configuracion y limites en [verificacion Gemini](docs/gemini.md).

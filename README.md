@@ -73,7 +73,7 @@ ni cambiar de plan para esta demo sin revisar primero sus condiciones y cuotas.
 
 ## Proximas etapas
 
-1. Verificar acceso al proveedor IA y habilitar GitHub App para los agentes.
+1. Habilitar GitHub App para los agentes y evaluar correcciones con Groq.
 2. Implementar y validar respuesta desde nuestro servidor por WhatsApp.
 3. Construir CRUD, filtros y pruebas de la aplicacion de tareas.
 4. Implementar arnes, revision y correcciones aisladas.
@@ -89,5 +89,11 @@ Paginas publicas: `/privacy` y `/data-deletion`. Ver
 El workflow **Gemini API check** verifica acceso al modelo con una peticion
 sintetica desde main. Configuracion y limites en [verificacion Gemini](docs/gemini.md).
 El primer intento remoto fallo por timeout de red, sin confirmar la clave ni la cuota.
-Se agrega **Groq API check** como alternativa, con el secreto independiente GROQ_API_KEY.
-Ver [verificacion Groq](docs/groq.md). Ninguno procesa mensajes reales de WhatsApp.
+**Groq API check** confirmo acceso y una generacion real con openai/gpt-oss-120b,
+usando el secreto independiente GROQ_API_KEY. Esto no mide cuota restante ni calidad
+de correccion de codigo. Ver [verificacion Groq](docs/groq.md).
+Ninguno de los controles procesa mensajes reales de WhatsApp.
+
+**GitHub App check** valida la app dedicada, el alcance de un unico repositorio y
+la emision de tokens con permisos acotados. No modifica archivos ni crea PR en
+esa prueba. Ver [GitHub App](docs/github-app.md).

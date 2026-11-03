@@ -1,0 +1,54 @@
+name: GitHub App check
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/github-app-check.yml'
+      - 'harness/github_check.py'
+permissions:
+  contents: read
+concurrency:
+  group: github-app-check
+  cancel-in-progress: false
+jobs:
+  check-app:
+    if: github.repository == 'Sebitafx/agentops-tareas' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Create metadata-only installation token
+        id: scope-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.AGENT_APP_ID }}
+          private-key: ${{ secrets.AGENT_APP_PRIVATE_KEY }}
+          owner: Sebitafx
+          permission-metadata: read
+      - name: Verify app identity and installation scope
+        env:
+          GH_TOKEN: ${{ steps.scope-token.outputs.token }}
+          AGENT_APP_SLUG: ${{ steps.scope-token.outputs.app-slug }}
+        run: python -m harness.github_check installation
+      - name: Request required permissions for this repository only
+        id: repository-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.AGENT_APP_ID }}
+          private-key: ${{ secrets.AGENT_APP_PRIVATE_KEY }}
+          owner: Sebitafx
+          repositories: agentops-tareas
+          permission-contents: write
+          permission-pull-requests: write
+          permission-actions: write
+      - name: Verify repository access without changing files or PRs
+        env:
+          GH_TOKEN: ${{ steps.repository-token.outputs.token }}
+          AGENT_APP_SLUG: ${{ steps.repository-token.outputs.app-slug }}
+        run: python -m harness.github_check repository

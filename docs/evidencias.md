@@ -92,3 +92,29 @@ tokens ni cargas originales de mensajes en este repositorio publico.
   publica respondio 401 (autenticacion requerida), sin el marcador anterior.
 - Se agrega ese User-Agent al transporte. Las 47 pruebas de proveedores pasaron;
   falta confirmar la generacion real del cliente corregido con la clave de Actions.
+
+## 3 de noviembre de 2026 — Groq validado
+
+- Commit `3908c6893bf60b154f2e357c971cf3cb8e49d588`.
+- [Groq API check](https://github.com/Sebitafx/agentops-tareas/actions/runs/41708394926)
+  finalizo con success: provider groq, modelo openai/gpt-oss-120b, model_access true
+  y generation_confirmed true. Se envio unicamente el prompt sintetico.
+- [Bootstrap CI](https://github.com/Sebitafx/agentops-tareas/actions/runs/41708394935)
+  del mismo commit finalizo con success.
+- La identificacion transparente del cliente resolvio el rechazo observado de Groq.
+- El resultado no certifica cuota restante, modalidad de facturacion ni calidad de
+  correccion de codigo. Los mensajes de WhatsApp siguen sin enviarse a la IA.
+- Queda pendiente GitHub App, aplicacion CRUD, arnes de correccion/revision,
+  respuestas WhatsApp y despliegue autonomo.
+
+## 3 de noviembre de 2026 — GitHub App preparada
+
+- El participante registro agentops-tareas-sebitafx e instalo la App en su cuenta.
+- La pantalla de instalacion confirma Metadata read y Actions, Contents y Pull
+  requests read/write. La seleccion de repositorios se comprueba en la prueba remota.
+- AGENT_APP_ID y AGENT_APP_PRIVATE_KEY aparecen guardados en Actions; no se
+  recibieron sus valores ni se guardo el PEM en este repositorio.
+- GitHub App check usa la accion oficial para emitir y revocar tokens efimeros.
+  Comprueba alcance con Metadata read antes de pedir permisos del repo especifico.
+- 22 pruebas locales del comprobador aprobadas. La autenticacion real y el alcance
+  deben acreditarse con la ejecucion de Actions, no con estas pruebas simuladas.

@@ -8,24 +8,15 @@ import psycopg
 import pytest
 from fastapi.testclient import TestClient
 
-from bootstrap.database import Database, DeliveryStatus, IncomingMessage, SchemaError
+from bootstrap.database import (
+    MIGRATIONS,
+    SCHEMA_VERSION,
+    DeliveryStatus,
+    IncomingMessage,
+    SchemaError,
+)
 from bootstrap.main import app
 from tests.test_receiver import delivery, signed_post
-
-
-@pytest.fixture
-def database():
-    url = os.getenv("TEST_DATABASE_URL")
-    if not url:
-        pytest.skip("Configurar TEST_DATABASE_URL para integracion PostgreSQL")
-    database = Database(url)
-    with database.connect() as conn:
-        if conn.execute("SELECT current_database()").fetchone()[0] != "agentops_test":
-            pytest.fail("Integracion requiere una base aislada llamada agentops_test")
-    database.migrate()
-    with database.connect() as conn:
-        conn.execute("TRUNCATE agentops_inbox, agentops_delivery_status")
-    yield database
 
 
 def example() -> IncomingMessage:
@@ -37,7 +28,9 @@ def test_migrations_repeat_and_concurrent(database) -> None:
         list(executor.map(lambda _: database.migrate(), range(2)))
     database.check()
     with database.connect() as conn:
-        assert conn.execute("SELECT count(*) FROM agentops_schema_versions").fetchone()[0] == 1
+        assert conn.execute("SELECT count(*) FROM agentops_schema_versions").fetchone()[0] == len(
+            list(MIGRATIONS.glob("*.sql"))
+        )
 
 
 def test_duplicate_concurrent_messages(database) -> None:
@@ -66,14 +59,22 @@ def test_status_deduplication_and_sql_parameters(database) -> None:
 
 def test_schema_drift_detected(database) -> None:
     with database.connect() as conn:
-        original = conn.execute("SELECT checksum FROM agentops_schema_versions").fetchone()[0]
-        conn.execute("UPDATE agentops_schema_versions SET checksum = 'tampered'")
+        original = conn.execute(
+            "SELECT checksum FROM agentops_schema_versions WHERE version = %s", (SCHEMA_VERSION,)
+        ).fetchone()[0]
+        conn.execute(
+            "UPDATE agentops_schema_versions SET checksum = 'tampered' WHERE version = %s",
+            (SCHEMA_VERSION,),
+        )
     try:
         with pytest.raises(SchemaError):
             database.migrate()
     finally:
         with database.connect() as conn:
-            conn.execute("UPDATE agentops_schema_versions SET checksum = %s", (original,))
+            conn.execute(
+                "UPDATE agentops_schema_versions SET checksum = %s WHERE version = %s",
+                (original, SCHEMA_VERSION),
+            )
 
 
 def test_http_restart_preserves_message(database, monkeypatch, receiver_env) -> None:

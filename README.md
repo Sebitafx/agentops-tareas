@@ -12,7 +12,9 @@ El callback HTTPS, el campo messages y la suscripcion de la app a la WABA estan 
 Implementado: salud, version, handshake, migracion PostgreSQL y bandeja duradera
 de mensajes con firma HMAC, lista de remitentes autorizados y deduplicacion.
 Probado con PostgreSQL local y conexion real con Neon verificada desde `/ready`.
-Pendiente: gestor de tareas, agentes, respuestas WhatsApp, PR automaticos y despliegue
+Gestor CRUD y filtros implementado, con API, UI y E2E. Su despliegue como segundo
+servicio se describe en [gestor de tareas](docs/tareas.md).
+Pendiente: agentes, respuestas WhatsApp, PR automaticos y despliegue
 autonomo. Guardar un mensaje no ejecuta una correccion todavia.
 
 ## Ejecutar localmente (PowerShell)
@@ -32,8 +34,9 @@ Nunca compartir tokens, archivos `.env` ni claves privadas en el repositorio.
 
 ```powershell
 .venv/Scripts/python -m pytest -q
-.venv/Scripts/python -m ruff check bootstrap harness tests
-.venv/Scripts/python -m ruff format --check bootstrap harness tests
+.venv/Scripts/python -m ruff check bootstrap harness taskapp tests
+.venv/Scripts/python -m ruff format --check bootstrap harness taskapp tests
+.venv/Scripts/python -m mypy
 ```
 
 ## Publicar el servicio minimo en Render
@@ -73,9 +76,9 @@ ni cambiar de plan para esta demo sin revisar primero sus condiciones y cuotas.
 
 ## Proximas etapas
 
-1. Habilitar GitHub App para los agentes y evaluar correcciones con Groq.
-2. Implementar y validar respuesta desde nuestro servidor por WhatsApp.
-3. Construir CRUD, filtros y pruebas de la aplicacion de tareas.
+1. Desplegar el gestor y verificar persistencia en la nube.
+2. Evaluar correcciones con Groq y validar respuesta por WhatsApp.
+3. Conectar solicitudes almacenadas con las ejecuciones de los agentes.
 4. Implementar arnes, revision y correcciones aisladas.
 5. Proteger main, automatizar integracion y despliegue con comprobacion del SHA.
 6. Ejecutar los dos recorridos reales y preparar evidencias y defensa.
@@ -97,3 +100,6 @@ Ninguno de los controles procesa mensajes reales de WhatsApp.
 **GitHub App check** valida la app dedicada, el alcance de un unico repositorio y
 la emision de tokens con permisos acotados. No modifica archivos ni crea PR en
 esa prueba. Ver [GitHub App](docs/github-app.md).
+La ejecucion real de la GitHub App confirmo un unico repositorio, tokens con los
+permisos solicitados y consultas correctas; ambos tokens se revocaron al terminar.
+Las [convenciones Python](docs/convenciones-python.md) definen el criterio de revision.

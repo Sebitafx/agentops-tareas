@@ -3,4 +3,6 @@
 !requirements.txt
 !bootstrap/
 !bootstrap/**
+!taskapp/
+!taskapp/**
 **/__pycache__

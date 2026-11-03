@@ -18,3 +18,14 @@ services:
         sync: false
       - key: WHATSAPP_ALLOWED_SENDERS
         sync: false
+  - type: web
+    name: agentops-tasks
+    runtime: docker
+    plan: free
+    autoDeployTrigger: 'off'
+    healthCheckPath: /health
+    envVars:
+      - key: SERVICE_ROLE
+        value: tasks
+      - key: DATABASE_URL
+        sync: false

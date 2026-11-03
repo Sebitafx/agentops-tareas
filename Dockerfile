@@ -3,7 +3,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY bootstrap ./bootstrap
+COPY taskapp ./taskapp
 RUN useradd --create-home agentops
 USER agentops
 ENV PORT=10000
-CMD ["sh", "-c", "exec uvicorn bootstrap.main:app --host 0.0.0.0 --port ${PORT} --no-access-log"]
+CMD ["python", "-m", "bootstrap.serve"]

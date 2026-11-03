@@ -118,3 +118,26 @@ tokens ni cargas originales de mensajes en este repositorio publico.
   Comprueba alcance con Metadata read antes de pedir permisos del repo especifico.
 - 22 pruebas locales del comprobador aprobadas. La autenticacion real y el alcance
   deben acreditarse con la ejecucion de Actions, no con estas pruebas simuladas.
+
+## 3 de noviembre de 2026 — GitHub App validada
+
+- [GitHub App check](https://github.com/Sebitafx/agentops-tareas/actions/runs/41711500643)
+  termino con success en el commit 6cf5dac51cfbb45d8d2439f2d6a453b844c0ef93.
+- El token Metadata mostro un unico repositorio accesible: Sebitafx/agentops-tareas.
+- GitHub emitio el token limitado con Contents, Pull requests y Actions write.
+- Consultas de repo, main, PR y workflows correctas. No se probo una escritura.
+- Los dos pasos post de revocacion de tokens terminaron correctamente.
+- Bootstrap CI del mismo commit termino con success.
+
+## 3 de noviembre de 2026 — aplicacion de tareas
+
+- CRUD, filtros y UI responsive implementados con migracion aditiva 002_tasks.sql.
+- 133 pruebas locales de API/integracion aprobadas con PostgreSQL real, cobertura
+  combinada 92.41%, lint/formato correctos y mypy sin errores en taskapp.
+- Un E2E adicional en Chromium completo CRUD, filtros, persistencia al recargar,
+  eliminacion, viewport movil y verificacion de que HTML no se ejecuta.
+- Capturas locales en artifacts/tasks-desktop.png y tasks-mobile.png; revisadas.
+- Imagen Docker construida. Ambos roles arrancaron contra PostgreSQL local real:
+  /health y /ready respondieron 200; tasks tambien sirvio /api/tasks con datos.
+  El receptor sin secretos de Meta reporto receiver_configured false, como corresponde.
+- El gestor en Render y su persistencia en Neon siguen pendientes de desplegar.

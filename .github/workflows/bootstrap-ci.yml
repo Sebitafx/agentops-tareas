@@ -23,6 +23,7 @@ jobs:
           --health-retries 10
     env:
       TEST_DATABASE_URL: postgresql://agentops_test:local-test-only@127.0.0.1:5432/agentops_test
+      E2E_ENABLED: '1'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,7 +33,9 @@ jobs:
           python-version: '3.13'
           cache: pip
       - run: python -m pip install -r requirements-dev.txt
-      - run: python -m ruff check bootstrap harness tests
-      - run: python -m ruff format --check bootstrap harness tests
-      - run: python -m pytest -q --cov=bootstrap --cov=harness --cov-branch --cov-fail-under=80
+      - run: python -m ruff check bootstrap harness taskapp tests
+      - run: python -m ruff format --check bootstrap harness taskapp tests
+      - run: python -m mypy
+      - run: python -m playwright install --with-deps chromium
+      - run: python -m pytest -q --cov=bootstrap --cov=harness --cov=taskapp --cov-branch --cov-fail-under=80
       - run: docker build --tag agentops-bootstrap .

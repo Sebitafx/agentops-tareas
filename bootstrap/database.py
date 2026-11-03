@@ -9,7 +9,7 @@ import psycopg
 from psycopg.rows import dict_row
 
 MIGRATIONS = Path(__file__).parent / "migrations"
-SCHEMA_VERSION = "001_inbox.sql"
+SCHEMA_VERSION = "002_tasks.sql"
 
 
 class SchemaError(Exception):
@@ -81,6 +81,7 @@ class Database:
                 raise SchemaError("Migracion pendiente")
             conn.execute("SELECT 1 FROM agentops_inbox LIMIT 0")
             conn.execute("SELECT 1 FROM agentops_delivery_status LIMIT 0")
+            conn.execute("SELECT 1 FROM agentops_tasks LIMIT 0")
 
     def save(self, messages: list[IncomingMessage], statuses: list[DeliveryStatus]) -> None:
         # El contexto confirma TODO el lote antes de responder 200 a Meta.

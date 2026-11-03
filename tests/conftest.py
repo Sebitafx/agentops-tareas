@@ -1,4 +1,8 @@
+import os
+
 import pytest
+
+from bootstrap.database import Database
 
 
 @pytest.fixture(autouse=True)
@@ -19,3 +23,18 @@ def receiver_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("META_APP_SECRET", "test-app-secret")
     monkeypatch.setenv("WHATSAPP_PHONE_NUMBER_ID", "12345")
     monkeypatch.setenv("WHATSAPP_ALLOWED_SENDERS", "51900000001")
+
+
+@pytest.fixture
+def database():
+    url = os.getenv("TEST_DATABASE_URL")
+    if not url:
+        pytest.skip("Configurar TEST_DATABASE_URL para integracion PostgreSQL")
+    database = Database(url)
+    with database.connect() as conn:
+        if conn.execute("SELECT current_database()").fetchone()[0] != "agentops_test":
+            pytest.fail("Integracion requiere una base aislada llamada agentops_test")
+    database.migrate()
+    with database.connect() as conn:
+        conn.execute("TRUNCATE agentops_inbox, agentops_delivery_status, agentops_tasks")
+    yield database

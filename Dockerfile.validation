@@ -1,0 +1,16 @@
+FROM python:3.13-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PLAYWRIGHT_BROWSERS_PATH=/opt/browsers
+RUN apt-get update && apt-get install -y --no-install-recommends postgresql \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /opt/reference
+COPY requirements.txt requirements-dev.txt ./
+RUN pip install --no-cache-dir -r requirements-dev.txt \
+    && python -m playwright install --with-deps chromium \
+    && useradd --uid 10001 --create-home validator
+COPY pyproject.toml ./
+COPY bootstrap ./bootstrap
+COPY harness ./harness
+COPY taskapp ./taskapp
+COPY tests ./tests
+USER 10001:10001
+CMD ["python", "-m", "harness.offline_runner"]

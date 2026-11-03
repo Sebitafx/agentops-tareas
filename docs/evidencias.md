@@ -178,3 +178,30 @@ tokens ni cargas originales de mensajes en este repositorio publico.
   Chromium completo el E2E y la imagen Docker se construyo.
 - El participante mostro WHATSAPP_TOKEN configurado y oculto en Render.
 - Despliegue y mensaje real de ida/vuelta pendientes; no se acredita envio con mocks.
+
+## 3 de noviembre de 2026 — respuesta real de WhatsApp confirmada
+
+- Render publico 157fd0151c49ddf728751bd1be0003f59bfba605. /ready confirmo
+  003_replies.sql, receiver_configured true, reply_sender_configured true y
+  reply_worker_running true.
+- [CI del envio](https://github.com/Sebitafx/agentops-tareas/actions/runs/41733190778):
+  225 pruebas y 92.89% de cobertura en Linux.
+- El participante envio hola y mostro la respuesta de ayuda recibida a las 17:49
+  (Lima). Evidencia real de ida/vuelta, distinta de una simulacion de proveedor.
+- La respuesta informa que el agente de correccion aun no esta conectado. No se
+  acredita correccion, PR, integracion ni despliegue autonomo con ese saludo.
+- El participante configuro en privado AGENT_APP_ID y AGENT_APP_PRIVATE_KEY en
+  Render, y RENDER_TASKS_DEPLOY_HOOK en Actions. No se recibieron sus valores.
+
+## 3 de noviembre de 2026 — validacion aislada local
+
+- DockerValidator y offline_runner ejecutaron 245 pruebas con cobertura 87.22%.
+- Las comprobaciones internas confirmaron UID sin privilegios, raiz readonly e
+  interfaz de red exclusivamente loopback. PostgreSQL fue local al contenedor y
+  Chromium completo E2E. No se entregaron secretos ni acceso a Neon.
+- Pruebas adicionales verifican rechazo de borrados, reemplazos de tests, symlinks,
+  reportes incompletos y falta de aislamiento, ademas de limpieza tras timeout.
+- Primera ejecucion detecto clasificacion de imports distinta por rutas de proyecto;
+  se declaran los paquetes propios de Ruff. Segunda detecto rutas de mypy, alineadas
+  con PYTHONPATH. Se conservaron las reglas y las pruebas de comportamiento.
+- La nueva evaluacion de propuesta real en Actions esta pendiente de su ejecucion.

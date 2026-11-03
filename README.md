@@ -14,10 +14,10 @@ de mensajes con firma HMAC, lista de remitentes autorizados y deduplicacion.
 Probado con PostgreSQL local y conexion real con Neon verificada desde `/ready`.
 Gestor CRUD y filtros implementado, con API, UI y E2E. Desplegado y comprobado en
 https://agentops-tasks.onrender.com/. Configuracion en [gestor de tareas](docs/tareas.md).
-Contrato, politica de propuestas y bucle del arnes implementados. Falta conectar
-validacion Docker y PR; ver [arnes](docs/arnes.md).
-Respuestas WhatsApp de ayuda, registro y estado implementadas; prueba real de envio
-pendiente. Ver [respuestas](docs/respuestas-whatsapp.md).
+Contrato, politica de propuestas, bucle y validacion aislada Docker implementados.
+Falta conectar PR y solicitudes reales; ver [arnes](docs/arnes.md).
+Respuestas WhatsApp de ayuda, registro y estado implementadas; envio real de hola
+y respuesta de ayuda confirmado por el participante. Ver [respuestas](docs/respuestas-whatsapp.md).
 Pendiente: agentes, PR automaticos y despliegue
 autonomo. Guardar un mensaje no ejecuta una correccion todavia.
 

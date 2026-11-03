@@ -25,13 +25,19 @@ Responde solamente JSON con el contrato indicado. No hay herramientas de shell.
 
 
 class GroqProposer:
-    def __init__(self, key: str, model: str = DEFAULT_MODEL) -> None:
+    def __init__(
+        self,
+        key: str,
+        model: str = DEFAULT_MODEL,
+        visible_paths: frozenset[str] | None = None,
+    ) -> None:
         validate_key(key)
         # Esta etapa usa el modelo realmente comprobado; no hay fallback silencioso.
         if model != DEFAULT_MODEL:
             raise CheckError("MODEL_NOT_ALLOWED")
         self.key = key
         self.model = model
+        self.visible_paths = visible_paths
 
     def __call__(self, request: str, base: Mapping[str, str], feedback: str) -> Proposal:
         payload = {
@@ -39,7 +45,9 @@ class GroqProposer:
             "files": {
                 name: {"sha256": digest(content), "content": content}
                 for name, content in sorted(base.items())
+                if self.visible_paths is None or name in self.visible_paths
             },
+            "available_paths": sorted(base),
             "validation_feedback": feedback,
             "response_schema": Proposal.model_json_schema(),
         }

@@ -2,8 +2,8 @@
 
 Un modelo propone cambios; el arnes decide que operaciones permite y cuando detenerse.
 El modelo no recibe comandos de shell, claves, infraestructura ni libertad de modificar
-el repositorio completo. Esta etapa introduce el contrato y el bucle; aun falta conectar
-el validador Docker, la creacion de PR y los mensajes almacenados de WhatsApp.
+el repositorio completo. El contrato, bucle y validador Docker estan implementados;
+aun falta conectar la creacion de PR y los mensajes almacenados de WhatsApp.
 
 ## Contrato
 
@@ -31,12 +31,10 @@ Una propuesta prohibida no llega al validador. No mas de tres intentos; las cuot
 fallos del proveedor y validador no disponible detienen la solicitud. Un fallo nunca
 devuelve un candidato aprobado. Clarificar o rechazar tambien detiene el trabajo.
 
-El estado validated solo se obtiene del validador suministrado. Hoy los tests del
-motor usan validadores simulados: no acreditan ejecucion aislada de codigo de IA.
-Antes de conectar el motor a solicitudes reales, ese validador debe ejecutar los
-controles predefinidos en Docker sin secretos ni acceso de red, conservar las pruebas
-de referencia y producir evidencia verificable. La politica de rutas y el prompt
-no son un aislamiento de seguridad ni demuestran correccion funcional.
+El estado validated solo se obtiene del validador suministrado. Los tests unitarios
+del motor usan validadores simulados. DockerValidator es la implementacion real:
+ver [validacion aislada](validacion-aislada.md). La politica de rutas y el prompt
+no sustituyen el aislamiento ni demuestran correccion funcional por si solos.
 
 ## Adaptador y prueba real separada
 
@@ -46,11 +44,12 @@ a 3072 tokens. Estos topes no garantizan cuota disponible; 429 detiene el trabaj
 Fuente: [JSON de Groq](https://console.groq.com/docs/structured-outputs) y
 [parametros de razonamiento](https://console.groq.com/docs/reasoning).
 
-Agent proposal check solicita una sola propuesta para una tarea sintetica: cambiar
-el limite de titulo de 200 a 180 y agregar pruebas. Solo envia schemas.py y esa
-peticion ficticia. Verifica contrato, rutas, hashes y limites; guarda el JSON como
-artefacto de Actions durante tres dias. No aplica el parche, ejecuta codigo generado,
-crea PR ni despliega. Tampoco procesa mensajes personales de WhatsApp.
-Un resultado proposed acredita una generacion utilizable por el arnes, no un cambio
-funcionalmente validado. El workflow tiene contents read y no recibe tokens de GitHub
+Agent proposal check ahora usa evaluation_check: pide una propuesta para una tarea
+sintetica, cambiar el limite de titulo de 200 a 180 y agregar pruebas. Solo envia
+schemas.py, un indice de rutas publicas y esa peticion ficticia. Verifica contrato,
+rutas, hashes y limites; prueba el candidato en Docker y permite hasta tres intentos.
+Guarda propuesta y evidencia como artefactos tres dias. No aplica el parche al
+checkout, crea PR ni despliega. Tampoco procesa mensajes personales de WhatsApp.
+El preflight anterior produjo status proposed sin ejecutar codigo; no confundir
+esa evidencia con validated. El workflow tiene contents read y no recibe tokens de GitHub
 App ni credenciales de base de datos o Render. Solo main del repositorio autorizado.

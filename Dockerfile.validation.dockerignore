@@ -1,0 +1,15 @@
+*
+!Dockerfile.validation
+!requirements.txt
+!requirements-dev.txt
+!pyproject.toml
+!bootstrap/
+!bootstrap/**
+!harness/
+!harness/**
+!taskapp/
+!taskapp/**
+!tests/
+!tests/**
+**/__pycache__
+**/*.pyc

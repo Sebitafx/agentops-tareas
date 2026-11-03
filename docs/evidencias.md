@@ -141,3 +141,24 @@ tokens ni cargas originales de mensajes en este repositorio publico.
   /health y /ready respondieron 200; tasks tambien sirvio /api/tasks con datos.
   El receptor sin secretos de Meta reporto receiver_configured false, como corresponde.
 - El gestor en Render y su persistencia en Neon siguen pendientes de desplegar.
+
+## 3 de noviembre de 2026 — gestor publicado
+
+- [Aplicacion](https://agentops-tasks.onrender.com/) desplegada por el participante.
+- /version confirmo 901422f1e8c5fdea5b43598faeba07cd8399c580. El receptor tambien
+  confirmo ese commit. /health y /ready del gestor devolvieron ok, database ok,
+  schema_version 002_tasks.sql.
+- [CI del commit](https://github.com/Sebitafx/agentops-tareas/actions/runs/41713979261):
+  134 pruebas aprobadas, cobertura 92.41%, Ruff, mypy, Chromium y Docker correctos.
+- Comprobacion HTTP real: crear tarea ficticia, editarla, completarla, filtrar en
+  pendientes/completadas, leerla en una nueva peticion, eliminarla y confirmar 404.
+  Solo se elimino la tarea creada por esta comprobacion.
+- Evidencia local resumida artifacts/cloud-tasks-check.json, sin credenciales.
+- La persistencia tras redesplegar aun requiere demostracion independiente.
+
+## 3 de noviembre de 2026 — contrato y motor del arnes
+
+- Propuestas estructuradas, alcance por rutas/hashes y bucle de tres intentos.
+- Adaptador Groq y comprobacion sintetica implementados; resultado remoto pendiente.
+- Las pruebas del motor simulan el validador. Aun no se ejecuta codigo generado,
+  no se crean PR ni se conectan mensajes reales con el motor.

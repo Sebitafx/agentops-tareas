@@ -12,8 +12,10 @@ El callback HTTPS, el campo messages y la suscripcion de la app a la WABA estan 
 Implementado: salud, version, handshake, migracion PostgreSQL y bandeja duradera
 de mensajes con firma HMAC, lista de remitentes autorizados y deduplicacion.
 Probado con PostgreSQL local y conexion real con Neon verificada desde `/ready`.
-Gestor CRUD y filtros implementado, con API, UI y E2E. Su despliegue como segundo
-servicio se describe en [gestor de tareas](docs/tareas.md).
+Gestor CRUD y filtros implementado, con API, UI y E2E. Desplegado y comprobado en
+https://agentops-tasks.onrender.com/. Configuracion en [gestor de tareas](docs/tareas.md).
+Contrato, politica de propuestas y bucle del arnes implementados. Falta conectar
+validacion Docker y PR; ver [arnes](docs/arnes.md).
 Pendiente: agentes, respuestas WhatsApp, PR automaticos y despliegue
 autonomo. Guardar un mensaje no ejecuta una correccion todavia.
 
@@ -76,7 +78,7 @@ ni cambiar de plan para esta demo sin revisar primero sus condiciones y cuotas.
 
 ## Proximas etapas
 
-1. Desplegar el gestor y verificar persistencia en la nube.
+1. Verificar persistencia del gestor despues de redesplegar.
 2. Evaluar correcciones con Groq y validar respuesta por WhatsApp.
 3. Conectar solicitudes almacenadas con las ejecuciones de los agentes.
 4. Implementar arnes, revision y correcciones aisladas.

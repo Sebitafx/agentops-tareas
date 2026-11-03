@@ -1,0 +1,39 @@
+name: Agent proposal check
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/agent-proposal-check.yml'
+      - 'harness/proposal_check.py'
+      - 'harness/code_proposer.py'
+      - 'harness/proposals.py'
+permissions:
+  contents: read
+concurrency:
+  group: agent-proposal-check
+  cancel-in-progress: false
+jobs:
+  synthetic-proposal:
+    if: github.repository == 'Sebitafx/agentops-tareas' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+      - run: python -m pip install -r requirements.txt
+      - name: Request synthetic proposal without executing generated code
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: python -m harness.proposal_check
+      - uses: actions/upload-artifact@v4
+        with:
+          name: synthetic-proposal
+          path: artifacts/synthetic-proposal.json
+          if-no-files-found: error
+          retention-days: 3

@@ -4,10 +4,11 @@ import hmac
 import logging
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import psycopg
 from fastapi import FastAPI, HTTPException, Query, Request
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
 
@@ -48,6 +49,18 @@ async def lifespan(application: FastAPI):
 
 
 app = FastAPI(title="AgentOps Tareas — receptor WhatsApp", lifespan=lifespan)
+
+
+@app.get("/privacy", response_class=FileResponse, include_in_schema=False)
+def privacy() -> FileResponse:
+    return FileResponse(Path(__file__).parent / "static" / "privacy.html", media_type="text/html")
+
+
+@app.get("/data-deletion", response_class=FileResponse, include_in_schema=False)
+def data_deletion() -> FileResponse:
+    return FileResponse(
+        Path(__file__).parent / "static" / "data-deletion.html", media_type="text/html"
+    )
 
 
 def storage(request: Request) -> Database:

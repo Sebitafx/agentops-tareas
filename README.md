@@ -80,3 +80,6 @@ ni cambiar de plan para esta demo sin revisar primero sus condiciones y cuotas.
 6. Ejecutar los dos recorridos reales y preparar evidencias y defensa.
 
 Ver [conexion y comprobacion del almacenamiento](docs/almacenamiento.md).
+
+Paginas publicas: `/privacy` y `/data-deletion`. Ver
+[configuracion de privacidad y atencion de solicitudes](docs/privacidad.md).

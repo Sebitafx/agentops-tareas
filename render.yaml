@@ -10,3 +10,11 @@ services:
         value: receiver
       - key: META_VERIFY_TOKEN
         sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: META_APP_SECRET
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_ALLOWED_SENDERS
+        sync: false

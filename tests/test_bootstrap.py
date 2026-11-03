@@ -10,7 +10,7 @@ client = TestClient(app)
 
 def test_health_and_version(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("RENDER_GIT_COMMIT", "abc123")
-    assert client.get("/health").json() == {"status": "ok", "stage": "bootstrap"}
+    assert client.get("/health").json() == {"status": "ok", "stage": "receiver"}
     assert client.get("/version").json() == {"commit": "abc123"}
 
 

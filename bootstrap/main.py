@@ -5,6 +5,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
+from uuid import uuid4
 
 import psycopg
 from fastapi import FastAPI, HTTPException, Query, Request
@@ -15,7 +16,8 @@ from starlette.concurrency import run_in_threadpool
 from bootstrap.database import SCHEMA_VERSION, Database, SchemaError
 from bootstrap.whatsapp import MAX_BODY_BYTES, Event, ReceiverSettings, extract, valid_signature
 
-logger = logging.getLogger(__name__)
+# Hereda los handlers de Uvicorn: INFO debe ser visible en Render, sin access logs.
+logger = logging.getLogger("uvicorn.error.agentops")
 
 
 def receiver_settings() -> ReceiverSettings:
@@ -118,25 +120,55 @@ def verify_whatsapp(
 
 @app.post("/webhooks/whatsapp")
 async def receive_whatsapp(request: Request) -> dict[str, str]:
-    settings = receiver_settings()
+    delivery_id = uuid4().hex[:12]
+    logger.info("whatsapp_delivery id=%s stage=received", delivery_id)
+    try:
+        settings = receiver_settings()
+    except HTTPException:
+        logger.warning("whatsapp_delivery id=%s stage=rejected reason=configuration", delivery_id)
+        raise
     body = bytearray()
     async for chunk in request.stream():
         body.extend(chunk)
         if len(body) > MAX_BODY_BYTES:
+            logger.warning("whatsapp_delivery id=%s stage=rejected reason=body_limit", delivery_id)
             raise HTTPException(413, "Entrega demasiado grande")
     if not valid_signature(
         bytes(body), request.headers.get("x-hub-signature-256", ""), settings.secret
     ):
+        logger.warning("whatsapp_delivery id=%s stage=rejected reason=signature", delivery_id)
         raise HTTPException(403, "Firma de Meta rechazada")
     try:
         event = Event.model_validate_json(bytes(body))
-        messages, statuses = extract(event, settings)
+        delivery = extract(event, settings)
     except (ValidationError, ValueError) as exc:
+        logger.warning("whatsapp_delivery id=%s stage=rejected reason=payload", delivery_id)
         raise HTTPException(400, "Evento de Meta invalido") from exc
-    database = storage(request)
     try:
-        await run_in_threadpool(database.save, messages, statuses)
+        database = storage(request)
+    except HTTPException:
+        logger.warning(
+            "whatsapp_delivery id=%s stage=rejected reason=storage_not_ready", delivery_id
+        )
+        raise
+    try:
+        await run_in_threadpool(database.save, delivery.messages, delivery.statuses)
     except psycopg.Error as exc:
-        logger.warning("Entrega sin confirmar: fallo PostgreSQL (%s)", type(exc).__name__)
+        logger.warning(
+            "whatsapp_delivery id=%s stage=rejected reason=database error_type=%s",
+            delivery_id,
+            type(exc).__name__,
+        )
         raise HTTPException(503, "No se pudo guardar la entrega; reintentar") from exc
+    logger.info(
+        "whatsapp_delivery id=%s stage=accepted messages=%d statuses=%d "
+        "ignored_phone_changes=%d ignored_senders=%d ignored_types=%d ignored_fields=%d",
+        delivery_id,
+        len(delivery.messages),
+        len(delivery.statuses),
+        delivery.ignored_phone_changes,
+        delivery.ignored_senders,
+        delivery.ignored_types,
+        delivery.ignored_fields,
+    )
     return {"status": "accepted"}

@@ -3,6 +3,7 @@
 import hashlib
 import hmac
 import re
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Literal
 
@@ -75,24 +76,37 @@ class ReceiverSettings(BaseModel):
         return senders
 
 
-def extract(
-    event: Event, settings: ReceiverSettings
-) -> tuple[list[IncomingMessage], list[DeliveryStatus]]:
-    messages: list[IncomingMessage] = []
-    statuses: list[DeliveryStatus] = []
+@dataclass
+class ExtractedDelivery:
+    messages: list[IncomingMessage] = field(default_factory=list)
+    statuses: list[DeliveryStatus] = field(default_factory=list)
+    ignored_phone_changes: int = 0
+    ignored_senders: int = 0
+    ignored_types: int = 0
+    ignored_fields: int = 0
+
+
+def extract(event: Event, settings: ReceiverSettings) -> ExtractedDelivery:
+    result = ExtractedDelivery()
     for entry in event.entry:
         for change in entry.changes:
             if change.field != "messages":
+                result.ignored_fields += 1
                 continue
             value = Value.model_validate(change.value)
             if value.metadata.phone_number_id != settings.phone_number_id:
+                result.ignored_phone_changes += 1
                 continue
             for message in value.messages:
-                if message.sender not in settings.allowed_senders or message.type != "text":
+                if message.sender not in settings.allowed_senders:
+                    result.ignored_senders += 1
+                    continue
+                if message.type != "text":
+                    result.ignored_types += 1
                     continue
                 if message.text is None:
                     raise ValueError("Mensaje de texto sin texto")
-                messages.append(
+                result.messages.append(
                     IncomingMessage(
                         message.id,
                         value.metadata.phone_number_id,
@@ -101,10 +115,10 @@ def extract(
                         datetime.fromtimestamp(message.timestamp, UTC),
                     )
                 )
-            statuses.extend(
+            result.statuses.extend(
                 DeliveryStatus(
                     status.id, status.status, datetime.fromtimestamp(status.timestamp, UTC)
                 )
                 for status in value.statuses
             )
-    return messages, statuses
+    return result

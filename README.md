@@ -10,7 +10,7 @@ propio panel. El callback HTTPS quedo verificado en Meta y Render publico el ser
 
 Implementado: salud, version, handshake, migracion PostgreSQL y bandeja duradera
 de mensajes con firma HMAC, lista de remitentes autorizados y deduplicacion.
-Probado con PostgreSQL local; la conexion real con Neon se verifica al desplegar.
+Probado con PostgreSQL local y conexion real con Neon verificada desde `/ready`.
 Pendiente: gestor de tareas, agentes, respuestas WhatsApp, PR automaticos y despliegue
 autonomo. Guardar un mensaje no ejecuta una correccion todavia.
 
@@ -72,8 +72,9 @@ ni cambiar de plan para esta demo sin revisar primero sus condiciones y cuotas.
 
 ## Proximas etapas
 
-1. Desplegar esta version y comprobar `/ready` contra Neon.
-2. Configurar recepcion y validar mensajes desde nuestro servidor por WhatsApp.
+1. Diagnosticar la entrega de mensajes reales al callback: ver
+   [diagnostico WhatsApp](docs/diagnostico-whatsapp.md).
+2. Validar persistencia de un mensaje real y respuesta desde nuestro servidor por WhatsApp.
 3. Construir CRUD, filtros y pruebas de la aplicacion de tareas.
 4. Habilitar Gemini y GitHub App, arnes, revision y correcciones aisladas.
 5. Proteger main, automatizar integracion y despliegue con comprobacion del SHA.

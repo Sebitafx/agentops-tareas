@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+import logging
 
 import psycopg
 import pytest
@@ -186,3 +187,63 @@ def test_startup_migration_failure_sanitized(monkeypatch, caplog) -> None:
         assert client.get("/health").status_code == 200
     assert "private-password" not in caplog.text
     assert "private-host" not in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("kind", "expected"),
+    [
+        ("allowed", "messages=1"),
+        ("phone", "ignored_phone_changes=1"),
+        ("sender", "ignored_senders=1"),
+        ("media", "ignored_types=1"),
+        ("unrelated", "ignored_fields=1"),
+    ],
+)
+def test_diagnostic_counts_without_personal_data(client, caplog, kind, expected) -> None:
+    caplog.set_level(logging.INFO, logger="uvicorn.error.agentops")
+    event = delivery("private-body-should-never-be-logged")
+    change = event["entry"][0]["changes"][0]
+    if kind == "phone":
+        change["value"]["metadata"]["phone_number_id"] = "54321"
+    elif kind == "sender":
+        change["value"]["messages"][0]["from"] = "51900000002"
+    elif kind == "media":
+        change["value"]["messages"][0]["type"] = "image"
+    elif kind == "unrelated":
+        change["field"] = "account_alerts"
+    assert signed_post(client, event).status_code == 200
+    assert "stage=received" in caplog.text
+    assert "stage=accepted" in caplog.text
+    assert expected in caplog.text
+    for private in (
+        "51900000001",
+        "51900000002",
+        "12345",
+        "54321",
+        "wamid.test",
+        "private-body-should-never-be-logged",
+        "test-app-secret",
+    ):
+        assert private not in caplog.text
+    if kind != "allowed":
+        assert "messages=0" in caplog.text
+
+
+def test_diagnostic_signature_rejection_without_credentials(client, caplog) -> None:
+    assert signed_post(client, delivery(), "sha256=" + "0" * 64).status_code == 403
+    assert "reason=signature" in caplog.text
+    assert "stage=accepted" not in caplog.text
+    assert "test-app-secret" not in caplog.text
+
+
+def test_diagnostic_database_failure_never_claims_acceptance(client, monkeypatch, caplog) -> None:
+    caplog.set_level(logging.INFO, logger="uvicorn.error.agentops")
+
+    def fail(*args):
+        raise psycopg.OperationalError("private-host private-password")
+
+    monkeypatch.setattr(app.state.database, "save", fail)
+    assert signed_post(client, delivery()).status_code == 503
+    assert "reason=database" in caplog.text
+    assert "stage=accepted" not in caplog.text
+    assert "private-password" not in caplog.text

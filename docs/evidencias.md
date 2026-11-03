@@ -28,3 +28,21 @@ tokens ni cargas originales de mensajes en este repositorio publico.
 - Cobertura de ramas y lineas combinada: 87.93%.
 - La conexion real del nuevo codigo con Neon y la entrega de mensajes al callback
   todavia requieren desplegar y comprobar esta version.
+
+## 3 de noviembre de 2026 — prueba real y diagnostico
+
+- Render desplego el almacenamiento y luego las paginas de privacidad.
+- `/ready` respondio `database: ok`, esquema `001_inbox.sql` y `receiver_configured: true`.
+- Meta acepto el evento sintetico enviado desde su panel; el emisor y receptor
+  ficticios no corresponden a los autorizados y no deben insertarse en Neon.
+- El participante publico la app; Meta mostro confirmacion de modo activo.
+- Las capturas confirman mensaje al numero de prueba correcto, texto correcto y
+  campo messages suscrito, pero Neon devuelve cero filas en agentops_inbox.
+- No se conoce aun si falta entrega de Meta o si el evento se descarta por filtros.
+- Se agregan logs de recepcion, rechazo y descarte sin cuerpos ni identificadores
+  personales. No se ha debilitado firma ni autorizacion para facilitar la prueba.
+- 46 pruebas aprobadas contra PostgreSQL local; cobertura 87.80%. Imagen construida.
+- Prueba de contenedor: eventos ficticios producen logs visibles diferenciando
+  `messages=0 ignored_phone_changes=1` y `messages=1` tras confirmar transaccion.
+- La revision de suscripcion WABA y la entrega real siguen pendientes; no declarar
+  alcanzados los retos por estas pruebas de infraestructura.

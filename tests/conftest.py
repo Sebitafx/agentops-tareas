@@ -14,6 +14,9 @@ def isolated_environment(monkeypatch: pytest.MonkeyPatch) -> None:
         "WHATSAPP_PHONE_NUMBER_ID",
         "WHATSAPP_ALLOWED_SENDERS",
         "META_VERIFY_TOKEN",
+        "WHATSAPP_TOKEN",
+        "META_GRAPH_VERSION",
+        "SERVICE_ROLE",
     ):
         monkeypatch.delenv(key, raising=False)
 
@@ -36,5 +39,7 @@ def database():
             pytest.fail("Integracion requiere una base aislada llamada agentops_test")
     database.migrate()
     with database.connect() as conn:
-        conn.execute("TRUNCATE agentops_inbox, agentops_delivery_status, agentops_tasks")
+        conn.execute(
+            "TRUNCATE agentops_inbox, agentops_delivery_status, agentops_tasks, agentops_jobs, agentops_outbox"
+        )
     yield database

@@ -8,8 +8,10 @@ from pathlib import Path
 import psycopg
 from psycopg.rows import dict_row
 
+from bootstrap.outbox import queue_receipt
+
 MIGRATIONS = Path(__file__).parent / "migrations"
-SCHEMA_VERSION = "002_tasks.sql"
+SCHEMA_VERSION = "003_replies.sql"
 
 
 class SchemaError(Exception):
@@ -82,6 +84,8 @@ class Database:
             conn.execute("SELECT 1 FROM agentops_inbox LIMIT 0")
             conn.execute("SELECT 1 FROM agentops_delivery_status LIMIT 0")
             conn.execute("SELECT 1 FROM agentops_tasks LIMIT 0")
+            conn.execute("SELECT 1 FROM agentops_jobs LIMIT 0")
+            conn.execute("SELECT 1 FROM agentops_outbox LIMIT 0")
 
     def save(self, messages: list[IncomingMessage], statuses: list[DeliveryStatus]) -> None:
         # El contexto confirma TODO el lote antes de responder 200 a Meta.
@@ -90,11 +94,11 @@ class Database:
             conn.execute("SET LOCAL statement_timeout = '5s'")
             conn.execute("SET LOCAL lock_timeout = '3s'")
             for message in messages:
-                conn.execute(
+                inserted = conn.execute(
                     """INSERT INTO agentops_inbox
                        (message_id, phone_number_id, sender, body, sent_at)
                        VALUES (%s, %s, %s, %s, %s)
-                       ON CONFLICT (message_id) DO NOTHING""",
+                       ON CONFLICT (message_id) DO NOTHING RETURNING message_id""",
                     (
                         message.message_id,
                         message.phone_number_id,
@@ -102,12 +106,20 @@ class Database:
                         message.body,
                         message.sent_at,
                     ),
-                )
+                ).fetchone()
+                if inserted:
+                    queue_receipt(conn, message)
             for status in statuses:
                 conn.execute(
                     """INSERT INTO agentops_delivery_status (message_id, status, occurred_at)
                        VALUES (%s, %s, %s) ON CONFLICT DO NOTHING""",
                     (status.message_id, status.status, status.occurred_at),
+                )
+                conn.execute(
+                    """UPDATE agentops_outbox SET delivery_status = %s, delivery_at = %s,
+                        updated_at = now() WHERE provider_message_id = %s
+                        AND (delivery_at IS NULL OR delivery_at <= %s)""",
+                    (status.status, status.occurred_at, status.message_id, status.occurred_at),
                 )
 
     def summary(self) -> dict[str, int]:

@@ -162,3 +162,19 @@ tokens ni cargas originales de mensajes en este repositorio publico.
 - Adaptador Groq y comprobacion sintetica implementados; resultado remoto pendiente.
 - Las pruebas del motor simulan el validador. Aun no se ejecuta codigo generado,
   no se crean PR ni se conectan mensajes reales con el motor.
+
+- [Agent proposal check](https://github.com/Sebitafx/agentops-tareas/actions/runs/41717273957)
+  termino con success para 1c083c7a2422a85f9ad256bb7256116b2e51ece9. Propuesta sintetica
+  guardada como artefacto, sin aplicar ni ejecutar. CI del mismo commit aprobada.
+
+## 3 de noviembre de 2026 — envio de respuestas preparado
+
+- Migracion 003 agrega solicitudes y cola de salida; insercion atomica y deduplicada.
+- Ayuda, registro de peticiones y estado por remitente, sin procesamiento real con IA.
+- Proceso de fondo con reclamaciones concurrentes, comprobacion de destinatario,
+  errores sanitizados, vencimiento de respuestas y reintentos de tasa limitados.
+- Resultado ambiguo de red o interrupcion queda uncertain: no se promete exactly once.
+- 225 pruebas locales aprobadas, cobertura combinada 92.64%, Ruff y mypy correctos;
+  Chromium completo el E2E y la imagen Docker se construyo.
+- El participante mostro WHATSAPP_TOKEN configurado y oculto en Render.
+- Despliegue y mensaje real de ida/vuelta pendientes; no se acredita envio con mocks.

@@ -16,7 +16,9 @@ Gestor CRUD y filtros implementado, con API, UI y E2E. Desplegado y comprobado e
 https://agentops-tasks.onrender.com/. Configuracion en [gestor de tareas](docs/tareas.md).
 Contrato, politica de propuestas y bucle del arnes implementados. Falta conectar
 validacion Docker y PR; ver [arnes](docs/arnes.md).
-Pendiente: agentes, respuestas WhatsApp, PR automaticos y despliegue
+Respuestas WhatsApp de ayuda, registro y estado implementadas; prueba real de envio
+pendiente. Ver [respuestas](docs/respuestas-whatsapp.md).
+Pendiente: agentes, PR automaticos y despliegue
 autonomo. Guardar un mensaje no ejecuta una correccion todavia.
 
 ## Ejecutar localmente (PowerShell)
@@ -79,7 +81,7 @@ ni cambiar de plan para esta demo sin revisar primero sus condiciones y cuotas.
 ## Proximas etapas
 
 1. Verificar persistencia del gestor despues de redesplegar.
-2. Evaluar correcciones con Groq y validar respuesta por WhatsApp.
+2. Validar respuesta por WhatsApp y ejecutar correcciones en contenedor aislado.
 3. Conectar solicitudes almacenadas con las ejecuciones de los agentes.
 4. Implementar arnes, revision y correcciones aisladas.
 5. Proteger main, automatizar integracion y despliegue con comprobacion del SHA.

@@ -18,6 +18,10 @@ services:
         sync: false
       - key: WHATSAPP_ALLOWED_SENDERS
         sync: false
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: META_GRAPH_VERSION
+        value: v26.0
   - type: web
     name: agentops-tasks
     runtime: docker

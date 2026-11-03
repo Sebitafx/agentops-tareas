@@ -1,5 +1,6 @@
 """Receptor de Meta con bandeja duradera; agentes aun pendientes de implementar."""
 
+import asyncio
 import hmac
 import logging
 import os
@@ -38,6 +39,7 @@ def receiver_settings() -> ReceiverSettings:
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     application.state.database = None
+    application.state.reply_worker = None
     url = os.getenv("DATABASE_URL", "")
     if url:
         database = Database(url)
@@ -47,7 +49,28 @@ async def lifespan(application: FastAPI):
             logger.info("Migraciones PostgreSQL aplicadas")
         except (psycopg.Error, SchemaError, ValueError, OSError) as exc:
             logger.error("Inicializacion de PostgreSQL fallida (%s)", type(exc).__name__)
-    yield
+    stop = asyncio.Event()
+    worker = None
+    if (
+        application.state.database is not None
+        and os.getenv("SERVICE_ROLE", "receiver") == "receiver"
+        and os.getenv("WHATSAPP_TOKEN")
+    ):
+        from bootstrap.outbound import reply_worker
+
+        worker = asyncio.create_task(reply_worker(application.state.database, stop))
+        application.state.reply_worker = worker
+    try:
+        yield
+    finally:
+        stop.set()
+        if worker:
+            try:
+                await asyncio.wait_for(worker, timeout=20)
+            except (TimeoutError, asyncio.CancelledError):
+                worker.cancel()
+        application.state.reply_worker = None
+        application.state.database = None
 
 
 app = FastAPI(title="AgentOps Tareas — receptor WhatsApp", lifespan=lifespan)
@@ -95,11 +118,21 @@ def ready(request: Request) -> dict:
         receiver_settings()
     except HTTPException:
         configured = False
+    from bootstrap.outbound import OutboundSettings
+
+    try:
+        OutboundSettings.from_environment()
+        reply_configured = True
+    except (KeyError, ValidationError, ValueError):
+        reply_configured = False
+    worker = getattr(request.app.state, "reply_worker", None)
     return {
         "status": "ok",
         "database": "ok",
         "schema_version": SCHEMA_VERSION,
         "receiver_configured": configured,
+        "reply_sender_configured": reply_configured,
+        "reply_worker_running": worker is not None and not worker.done(),
         "agents": "pending",
     }
 

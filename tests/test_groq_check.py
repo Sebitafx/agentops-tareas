@@ -35,6 +35,8 @@ def test_groq_success_no_secret_or_private_input(monkeypatch, capsys):
     assert "private-groq-key" not in output
     assert len(calls) == 2
     assert calls[0].get_header("Authorization") == "Bearer private-groq-key"
+    assert calls[0].get_header("User-agent") == provider_http.USER_AGENT
+    assert calls[1].get_header("User-agent") == provider_http.USER_AGENT
     assert calls[0].full_url == "https://api.groq.com/openai/v1/models"
     assert calls[1].full_url == "https://api.groq.com/openai/v1/chat/completions"
     payload = json.loads(calls[1].data)

@@ -7,6 +7,7 @@ import urllib.request
 
 MAX_RESPONSE_BYTES = 1048576
 ALLOWED_HOSTS = frozenset({"generativelanguage.googleapis.com", "api.groq.com"})
+USER_AGENT = "AgentOps-Tareas/0.1 (+https://github.com/Sebitafx/agentops-tareas)"
 
 
 class CheckError(Exception):
@@ -33,7 +34,7 @@ def request_json(url: str, headers: dict[str, str], payload: dict | None = None)
     request = urllib.request.Request(
         url,
         data=json.dumps(payload).encode() if payload is not None else None,
-        headers={**headers, "Content-Type": "application/json"},
+        headers={**headers, "Content-Type": "application/json", "User-Agent": USER_AGENT},
         method="POST" if payload is not None else "GET",
     )
     try:

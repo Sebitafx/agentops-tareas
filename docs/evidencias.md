@@ -85,3 +85,10 @@ tokens ni cargas originales de mensajes en este repositorio publico.
   con Gemini sin habilitar fallback ni procesamiento de mensajes personales.
 - 93 pruebas locales aprobadas, con PostgreSQL real y proveedores simulados;
   cobertura combinada 91.04%. La validacion real de Groq se documentara por separado.
+
+- Primer intento real de Groq: HTTP 403. Una prueba publica sin claves reprodujo
+  el 403 y su marcador de rechazo del cliente predeterminado de urllib.
+- Al identificar transparentemente el cliente como AgentOps-Tareas, la misma ruta
+  publica respondio 401 (autenticacion requerida), sin el marcador anterior.
+- Se agrega ese User-Agent al transporte. Las 47 pruebas de proveedores pasaron;
+  falta confirmar la generacion real del cliente corregido con la clave de Actions.

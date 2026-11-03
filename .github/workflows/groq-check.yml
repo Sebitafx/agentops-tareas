@@ -3,7 +3,10 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['.github/workflows/groq-check.yml']
+    paths:
+      - '.github/workflows/groq-check.yml'
+      - 'harness/groq_check.py'
+      - 'harness/provider_http.py'
 permissions:
   contents: read
 concurrency:

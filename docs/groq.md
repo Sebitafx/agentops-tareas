@@ -7,7 +7,8 @@ cuota agotada ni saturacion. Mantener su control independiente para diagnosticar
 ## Ejecucion
 
 GitHub > Actions > **Groq API check** > Run workflow > main. La primera subida del
-archivo de workflow a main tambien ejecuta el control. No se activa desde PR,
+archivo de workflow a main tambien ejecuta el control, al igual que cambios en el
+control Groq o su transporte. No se activa desde PR,
 forks ni ramas distintas de main. No usa ni extrae credenciales locales de Git.
 Para repetir un job fallido usar la UI de GitHub o un conector autorizado para Actions.
 
@@ -18,7 +19,12 @@ razonamiento bajo. No se incluyen tools, busqueda, datos de Neon, mensajes de
 WhatsApp ni codigo del repositorio. No se ejecuta la respuesta del modelo.
 
 El transporte compartido admite unicamente HTTPS y los hosts revisados de Google
-y Groq. No sigue redirects, no reintenta errores y acota la respuesta a 1 MiB. No
+y Groq. Identifica el cliente como AgentOps-Tareas con su URL de repositorio mediante
+User-Agent. La prueba publica sin claves rechazo el cliente predeterminado con 403
+y acepto la solicitud del cliente identificado hasta el control de autenticacion (401).
+Esta prueba de transporte no verifica por si sola la clave real.
+
+El transporte no sigue redirects, no reintenta errores y acota la respuesta a 1 MiB. No
 imprime claves, cuerpos de respuestas, razonamiento ni errores crudos del proveedor.
 
 Resultado exitoso esperado:

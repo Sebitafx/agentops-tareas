@@ -22,7 +22,7 @@ function showError(error) {
 function resetForm() {
   editing = null;
   $("#task-form").reset();
-  $("#form-heading").textContent = "Una cosa a la vez";
+  $("#form-heading").textContent = "Mis tareas";
   // Updated button text to match new requirement
   $("#submit").textContent = "Crear tarea ↗";
   $("#cancel").hidden = true;

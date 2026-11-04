@@ -34,6 +34,8 @@ nube son evidencias diferentes.
 - [x] Se mantienen prioridad de rutas explicitas, estilos y exclusion de tests privados.
 - [x] Motivos estables por intento en logs y respuesta fallida, con enlace a Actions;
       sin publicar prompts, propuestas ni diagnosticos crudos.
+- [x] E2E exige conservar el encabezado inicial tras crear/editar sin fijar su texto.
+      Suite aislada de esta correccion: 341 pruebas aprobadas, cobertura >=80%.
 - [ ] Integrar la correccion y repetir la solicitud real del participante.
 
 - [x] CRUD publico con PostgreSQL, filtros y API en agentops-tasks.

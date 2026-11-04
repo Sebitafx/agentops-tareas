@@ -26,6 +26,20 @@ Para UI esta instalado playwright.sync_api, NO pytest-playwright: no existen
 fixtures page, browser ni context. Usa sync_playwright y browser.new_page dentro
 del test. Puedes importar la fixture de servidor con:
 from tests.test_tasks_e2e import tasks_url as tasks_url
+tasks_url es una FIXTURE: declárala como parámetro del test, def test_ui(tasks_url).
+Sin ese parámetro, tasks_url es la función importada, NO una URL: nunca la pases
+así a page.goto ni modifiques la fixture de referencia para arreglarlo.
+Ejemplo válido (adapta la aserción al requisito):
+from playwright.sync_api import expect, sync_playwright
+def test_ui(tasks_url):
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page()
+        page.goto(tasks_url)
+        expect(page.locator("#form-heading")).to_be_visible()
+        browser.close()
+Si solo cambias una etiqueta, puedes apoyarte en el E2E de referencia existente;
+no es obligatorio agregar un test nuevo. Nunca edites los tests existentes.
 No modifiques conftest. Usa datos ficticios y espera condiciones de DOM, no sleeps.
 Responde solamente JSON con el contrato indicado. No hay herramientas de shell.
 """

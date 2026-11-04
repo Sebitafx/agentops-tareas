@@ -1,0 +1,45 @@
+name: Gemini proposal check
+on:
+  workflow_dispatch:
+  push:
+    branches: ['agentops/fix/clarification-rate-limits']
+    paths:
+      - '.github/workflows/gemini-proposal-check.yml'
+      - 'harness/gemini_proposer.py'
+permissions:
+  contents: read
+concurrency:
+  group: gemini-proposal-check
+  cancel-in-progress: false
+jobs:
+  synthetic:
+    if: github.repository == 'Sebitafx/agentops-tareas' && github.actor == 'Sebitafx' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/agentops/fix/clarification-rate-limits')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+      - run: python -m pip install -r requirements-dev.txt
+      - name: Check Gemini access
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python -m harness.gemini_check
+      - run: docker build --file Dockerfile.validation --tag agentops-validator:${{ github.sha }} .
+      - name: Generate synthetic UI change and validate without network or secrets
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python -m harness.evaluation_check --provider gemini --scenario button-label --image agentops-validator:${{ github.sha }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gemini-proposal-validation
+          path: |
+            artifacts/evaluation-summary.json
+            artifacts/evaluations/
+            artifacts/latest-validation.json
+          retention-days: 3

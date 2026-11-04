@@ -73,4 +73,27 @@ Guarda propuesta y evidencia como artefactos tres dias. No aplica el parche al
 checkout, crea PR ni despliega. Tampoco procesa mensajes personales de WhatsApp.
 El preflight anterior produjo status proposed sin ejecutar codigo; no confundir
 esa evidencia con validated. El workflow tiene contents read y no recibe tokens de GitHub
+
+## Respaldo Gemini ante cuota
+
+Si GEMINI_API_KEY esta configurada en Actions, WhatsApp y la reparacion de pushes
+usan Groq primero. Solo QUOTA_OR_RATE_LIMIT activa Gemini 3.8 Flash, con un evento
+provider_fallback en el registro. No cambia por fallos de autenticacion, red,
+contrato, politicas ni pruebas. Una vez activado, conserva Gemini durante los
+intentos restantes de esa solicitud. No aumenta los tres intentos de correccion.
+La revision contextual tambien admite ese respaldo, conservando su control de
+reglas, archivos y lineas. Si ambos proveedores rechazan, se detiene sin aprobar.
+
+Comparte el mismo contexto acotado, hashes y contrato Pydantic; exige respuesta
+JSON completa del modelo permitido. Cada propuesta pasa las mismas politicas,
+pruebas de referencia y contenedor aislado antes de crear un PR. La clave no
+entra al prompt, contenedor ni artefactos. No se activa facturacion ni se infiere
+cuota restante. Un plan gratuito puede seguir agotandose en ambos proveedores.
+
+Gemini proposal check comprueba acceso y genera un cambio sintetico de etiqueta
+con oraculo E2E; nunca crea PR ni despliega. Se puede lanzar manualmente en main.
+Durante esta implementacion se ejecuta tambien al actualizar el adaptador en la
+rama de mantenimiento explicitamente permitida, con actor/repo restringidos.
+Ver [API Gemini](https://ai.google.dev/api/generate-content) y
+[precios y modalidad gratuita](https://ai.google.dev/gemini-api/docs/pricing).
 App ni credenciales de base de datos o Render. Solo main del repositorio autorizado.

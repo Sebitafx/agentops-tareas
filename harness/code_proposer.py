@@ -72,7 +72,7 @@ class GroqProposer:
         self.model = model
         self.visible_paths = visible_paths
 
-    def __call__(self, request: str, base: Mapping[str, str], feedback: str) -> Proposal:
+    def context(self, request: str, base: Mapping[str, str], feedback: str) -> str:
         payload = {
             "request": request,
             "files": {
@@ -106,6 +106,10 @@ class GroqProposer:
                     break
         if len(SYSTEM) + len(context) > MAX_CONTEXT_CHARS:
             raise CheckError("CONTEXT_TOO_LARGE")
+        return context
+
+    def __call__(self, request: str, base: Mapping[str, str], feedback: str) -> Proposal:
+        context = self.context(request, base, feedback)
         result = request_json(
             API_ROOT + "/chat/completions",
             {"Authorization": "Bearer " + self.key},

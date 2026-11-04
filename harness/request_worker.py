@@ -15,6 +15,7 @@ from harness.code_proposer import GroqProposer
 from harness.deploy import APP, DeploymentError, deploy_commit, hook_for_commit
 from harness.engine import run_request
 from harness.formatting import normalize_proposal
+from harness.gemini_proposer import with_gemini_fallback
 from harness.integrate import IntegrationError, integrate_pr
 from harness.provider_http import CheckError
 from harness.publish import publish_pr
@@ -129,6 +130,7 @@ def execute(job_id: UUID, image: str, run_id: str) -> int:
         proposer = GroqProposer(
             os.getenv("GROQ_API_KEY", ""), visible_paths=visible_files(request, validator.baseline)
         )
+        proposer = with_gemini_fallback(proposer, visible_files(request, validator.baseline))
         outcome = run_request(
             request,
             validator.baseline,

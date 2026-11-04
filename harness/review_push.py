@@ -18,6 +18,7 @@ from harness.code_proposer import GroqProposer
 from harness.deploy import APP, DeploymentError, deploy_commit
 from harness.engine import Outcome, run_request
 from harness.formatting import normalize_proposal
+from harness.gemini_proposer import generate_json, with_gemini_fallback
 from harness.groq_check import API_ROOT, DEFAULT_MODEL
 from harness.integrate import IntegrationError, integrate_pr
 from harness.proposals import (
@@ -91,7 +92,22 @@ def contextual_review(key: str, candidate: dict[str, str], paths: list[str]) -> 
     context = json.dumps({name: candidate[name] for name in paths}, ensure_ascii=False)
     if len(context) > 12000:
         raise CheckError("REVIEW_CONTEXT_TOO_LARGE")
-    result = request_json(
+
+    def review_request(url, headers, payload):
+        try:
+            return request_json(url, headers, payload)
+        except CheckError as exc:
+            backup_key = os.getenv("GEMINI_API_KEY", "")
+            if exc.reason != "QUOTA_OR_RATE_LIMIT" or not backup_key:
+                raise
+            print(json.dumps({"event": "review_provider_fallback", "to": "gemini"}), flush=True)
+            text = generate_json(backup_key, payload["messages"][0]["content"], context, 1536)
+            return {
+                "model": DEFAULT_MODEL,
+                "choices": [{"finish_reason": "stop", "message": {"content": text}}],
+            }
+
+    result = review_request(
         API_ROOT + "/chat/completions",
         {"Authorization": "Bearer " + key},
         {
@@ -177,6 +193,7 @@ def execute(
     report.update(initial_report)
     if not initial.passed:
         provider = GroqProposer(os.getenv("GROQ_API_KEY", ""), visible_paths=frozenset(changed))
+        provider = with_gemini_fallback(provider, frozenset(changed))
 
         def propose(request, base, feedback):
             return provider(request, base, initial.feedback + "\n" + feedback)

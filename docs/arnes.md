@@ -49,11 +49,21 @@ no sustituyen el aislamiento ni demuestran correccion funcional por si solos.
 GroqProposer usa el modelo comprobado openai/gpt-oss-120b, esfuerzo low, JSON Object
 Mode y contrato validado localmente. Limita contexto a 16000 caracteres y salida
 a 4096 tokens. Espera configurable entre llamadas (65 segundos en los workflows)
-para reducir rafagas; no garantiza cuota disponible. 429 detiene el trabajo.
+para reducir rafagas; no garantiza cuota disponible. Ante un 429 de Groq con
+Retry-After numerico entre 0 y 60 segundos (sin incluir 0), el transporte espera
+y reintenta la misma peticion hasta dos veces, como maximo 120 segundos de espera.
+No reintenta errores de red, autenticacion ni otros proveedores. Si falta esa
+cabecera, exige una espera mayor o persiste el rechazo, detiene el trabajo sin
+cambiar modelo ni contratar servicios. Esto no elimina los limites diarios.
+Ver [limites y cabeceras de Groq](https://console.groq.com/docs/rate-limits).
 Fuente: [JSON de Groq](https://console.groq.com/docs/structured-outputs) y
 [parametros de razonamiento](https://console.groq.com/docs/reasoning).
 
-Agent proposal check usa evaluation_check con cuatro escenarios: limite de titulo,
+Agent proposal check se ejecuta solo manualmente (workflow_dispatch), para no
+consumir cuota de IA automaticamente con cada cambio del arnes. Evitar iniciarlo
+mientras hay solicitudes reales en curso: la cuota se comparte por organizacion.
+Las validaciones obligatorias de Bootstrap CI siguen activas en push y PR.
+Usa evaluation_check con cuatro escenarios: limite de titulo,
 etiqueta de boton, buscador local y solicitud ambigua. Comparte solo los archivos
 pertinentes y un indice publico. Verifica contrato, rutas, hashes y limites; prueba
 el candidato en Docker y permite hasta tres intentos. Los tres cambios tienen

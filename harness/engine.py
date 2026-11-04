@@ -50,6 +50,17 @@ def missing_requirement(request: str) -> str | None:
     )
     plain = " ".join(re.sub(r"[^a-z0-9 ]", " ", plain).split())
     if re.fullmatch(
+        r"(?:agrega|agregar|anade|anadir|crea|crear) "
+        r"(?:(?:el|la|un|una|los|las) )?"
+        r"(?:boton|botones|funcion|funcionalidad|algo)"
+        r"(?: por favor)?",
+        plain,
+    ):
+        return (
+            "¿Qué debe hacer lo que quieres agregar y dónde debe aparecer? "
+            "Si es un botón, indica su texto y qué debe ocurrir al pulsarlo."
+        )
+    if re.fullmatch(
         r"(?:cambia|cambiar|modifica|modificar|mejora|mejorar) "
         r"(?:(?:el|la|un|una|los|las) )?"
         r"(?:boton|botones|color|colores|texto|interfaz|sistema|aplicacion)",

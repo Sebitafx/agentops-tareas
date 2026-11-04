@@ -115,6 +115,30 @@ no hay evidencia aun de que ejecute el puente actualizado.
 
 ## Configuracion de cuentas
 
+### Actualizacion del 4 de noviembre: aclaraciones y cuota
+
+- Recorrido real confirmado por el participante: solicitud dd85cc4c-9d9d-4b7e-a4fe-2ccbddaae976,
+  [ejecucion 41792177303](https://github.com/Sebitafx/agentops-tareas/actions/runs/41792177303),
+  [PR 9](https://github.com/Sebitafx/agentops-tareas/pull/9), merge automatico ab9fdcc
+  y encabezado publicado «Mis tareas». Las casillas historicas inferiores no
+  sustituyen esta evidencia mas reciente.
+- La solicitud «Agregar un boton» (768d4a77...) no entraba en el filtro previo
+  de ambiguedad. Corregido: ahora pregunta accion, ubicacion y texto antes de
+  consumir IA o validar cambios; falta comprobar la conversacion real tras el merge.
+- La solicitud de modo oscuro (468f749b...) recibio QUOTA_OR_RATE_LIMIT en
+  [41794098893](https://github.com/Sebitafx/agentops-tareas/actions/runs/41794098893).
+  Ese registro no distingue cuota diaria de limite por minuto. El transporte
+  ahora respeta Retry-After breve de Groq con hasta dos reintentos y un maximo
+  de 120 segundos de espera. Sin cabecera util o con cuota persistente se detiene.
+- Evaluaciones sinteticas con IA solo manuales; Bootstrap CI obligatorio sigue
+  ejecutandose en push/PR. No se ha cambiado modelo ni activado facturacion.
+- Estas correcciones afectan al controlador de Actions; no requieren despliegue
+  manual del receptor en Render. Pendientes CI del PR, merge y prueba WhatsApp real.
+- Validacion local completa en Docker sin red ni secretos: 364 pruebas aprobadas,
+  4 omitidas, cobertura 82,51 %, lint, formato y tipos aprobados. Regresiones de
+  aclaracion y transporte usan respuestas simuladas; no acreditan cuota real
+  disponible ni la implementacion de modo oscuro.
+
 - [x] GitHub App instalada solo en este repositorio; secretos de Actions configurados.
 - [x] Variables de App en el receptor y hook de tareas en Actions configurados por el participante.
 - [x] Administration Read-only agregado segun confirmacion del participante;

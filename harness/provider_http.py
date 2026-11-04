@@ -1,6 +1,7 @@
-"""Transporte JSON acotado para los proveedores revisados. Sin reintentos ni redirects."""
+"""Transporte acotado; solo reintenta 429 de Groq con Retry-After breve."""
 
 import json
+import math
 import os
 import time
 import urllib.error
@@ -8,6 +9,8 @@ import urllib.parse
 import urllib.request
 
 MAX_RESPONSE_BYTES = 1048576
+MAX_RATE_RETRIES = 2
+MAX_RETRY_AFTER_SECONDS = 60
 ALLOWED_HOSTS = frozenset({"generativelanguage.googleapis.com", "api.groq.com"})
 USER_AGENT = "AgentOps-Tareas/0.1 (+https://github.com/Sebitafx/agentops-tareas)"
 _last_groq_started: float | None = None
@@ -57,6 +60,46 @@ def request_json(url: str, headers: dict[str, str], payload: dict | None = None)
         headers={**headers, "Content-Type": "application/json", "User-Agent": USER_AGENT},
         method="POST" if payload is not None else "GET",
     )
+    for attempt in range(MAX_RATE_RETRIES + 1):
+        try:
+            return send_json(request)
+        except urllib.error.HTTPError as exc:
+            # Solo un rechazo explicito garantiza que no hubo una generacion aceptada.
+            # No se interpreta ni registra el cuerpo externo (puede contener secretos).
+            delay = retry_delay((exc.headers or {}).get("Retry-After", ""))
+            retry = (
+                parts.netloc == "api.groq.com"
+                and parts.path.endswith("/chat/completions")
+                and exc.code == 429
+                and delay is not None
+                and attempt < MAX_RATE_RETRIES
+            )
+            code = exc.code
+            exc.close()
+            if retry:
+                time.sleep(delay)
+                continue
+            reasons = {
+                400: "INVALID_REQUEST",
+                401: "AUTHENTICATION_FAILED",
+                403: "PERMISSION_DENIED",
+                404: "MODEL_UNAVAILABLE",
+                429: "QUOTA_OR_RATE_LIMIT",
+            }
+            reason = reasons.get(code, "PROVIDER_UNAVAILABLE" if code >= 500 else "HTTP_ERROR")
+            raise CheckError(reason, code) from None
+    raise CheckError("QUOTA_OR_RATE_LIMIT", 429)
+
+
+def retry_delay(value: str) -> float | None:
+    try:
+        delay = float(value)
+    except (TypeError, ValueError):
+        return None
+    return delay if math.isfinite(delay) and 0 < delay <= MAX_RETRY_AFTER_SECONDS else None
+
+
+def send_json(request: urllib.request.Request) -> dict:
     try:
         opener = urllib.request.build_opener(NoRedirect())
         with opener.open(request, timeout=30) as response:
@@ -67,17 +110,8 @@ def request_json(url: str, headers: dict[str, str], payload: dict | None = None)
         if not isinstance(result, dict):
             raise CheckError("INVALID_RESPONSE")
         return result
-    except urllib.error.HTTPError as exc:
-        reasons = {
-            400: "INVALID_REQUEST",
-            401: "AUTHENTICATION_FAILED",
-            403: "PERMISSION_DENIED",
-            404: "MODEL_UNAVAILABLE",
-            429: "QUOTA_OR_RATE_LIMIT",
-        }
-        reason = reasons.get(exc.code, "PROVIDER_UNAVAILABLE" if exc.code >= 500 else "HTTP_ERROR")
-        exc.close()
-        raise CheckError(reason, exc.code) from None
+    except urllib.error.HTTPError:
+        raise
     except (urllib.error.URLError, TimeoutError, OSError):
         raise CheckError("NETWORK_ERROR") from None
     except (ValueError, UnicodeError):

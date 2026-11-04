@@ -23,7 +23,7 @@ function resetForm() {
   editing = null;
   $("#task-form").reset();
   $("#form-heading").textContent = "Una cosa a la vez";
-  $("#submit").textContent = "Crear tarea ↗";
+  $("#submit").textContent = "Agregar tarea ↗";
   $("#cancel").hidden = true;
 }
 
@@ -111,6 +111,7 @@ $("#task-form").addEventListener("submit", async (event) => {
 });
 $("#cancel").addEventListener("click", resetForm);
 $("#refresh").addEventListener("click", reload);
+
 document.querySelectorAll("[data-filter]").forEach((button) => button.addEventListener("click", () => {
   filter = button.dataset.filter;
   document.querySelectorAll("[data-filter]").forEach((item) => item.setAttribute("aria-pressed", String(item === button)));

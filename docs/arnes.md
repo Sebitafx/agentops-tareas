@@ -77,7 +77,7 @@ esa evidencia con validated. El workflow tiene contents read y no recibe tokens 
 ## Respaldo Gemini ante cuota
 
 Si GEMINI_API_KEY esta configurada en Actions, WhatsApp y la reparacion de pushes
-usan Groq primero. Solo QUOTA_OR_RATE_LIMIT activa Gemini 3.8 Flash, con un evento
+usan Groq primero. Solo QUOTA_OR_RATE_LIMIT activa Gemini 3.5 Flash-Lite, con un evento
 provider_fallback en el registro. No cambia por fallos de autenticacion, red,
 contrato, politicas ni pruebas. Una vez activado, conserva Gemini durante los
 intentos restantes de esa solicitud. No aumenta los tres intentos de correccion.

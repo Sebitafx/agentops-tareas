@@ -3,6 +3,10 @@
 App registrada e instalada por el participante: `agentops-tareas-sebitafx`.
 App ID: `5601084` (identificador, no secreto). Los permisos configurados son
 Contents, Pull requests y Actions en lectura/escritura, mas Metadata en lectura.
+Esta iteracion requiere ademas Administration Read-only para consultar proteccion
+de main. El participante confirmo el ajuste; GitHub App check solicita ese permiso
+en el token para verificar que la instalacion lo haya concedido. No pide escritura
+de administracion ni permite modificar la proteccion.
 La App no necesita webhook: los eventos de push los recibiran los workflows.
 
 Los secretos AGENT_APP_ID y AGENT_APP_PRIVATE_KEY se guardaron en Actions. No se

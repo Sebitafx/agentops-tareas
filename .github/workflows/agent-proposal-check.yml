@@ -21,7 +21,7 @@ jobs:
   synthetic-proposal:
     if: github.repository == 'Sebitafx/agentops-tareas' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
         with:
@@ -35,7 +35,8 @@ jobs:
       - name: Generate and validate synthetic proposal in isolated container
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-        run: python -m harness.evaluation_check --image agentops-validator:${{ github.sha }}
+          GROQ_MIN_INTERVAL_SECONDS: '65'
+        run: python -m harness.evaluation_check --image agentops-validator:${{ github.sha }} --scenario all
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -44,5 +45,6 @@ jobs:
             artifacts/synthetic-proposal.json
             artifacts/evaluation-summary.json
             artifacts/latest-validation.json
+            artifacts/evaluations/
           if-no-files-found: warn
           retention-days: 3

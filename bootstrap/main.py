@@ -1,4 +1,4 @@
-"""Receptor de Meta con bandeja duradera; agentes aun pendientes de implementar."""
+"""Receptor de Meta, respuestas y despacho duradero de solicitudes a Actions."""
 
 import asyncio
 import hmac
@@ -142,6 +142,14 @@ def ready(request: Request) -> dict:
     except (KeyError, ValidationError, ValueError):
         reply_configured = False
     worker = getattr(request.app.state, "reply_worker", None)
+    dispatcher = getattr(request.app.state, "agent_dispatcher", None)
+    from bootstrap.github_app import AppSettings, GitHubError
+
+    try:
+        AppSettings.from_environment()
+        agent_configured = True
+    except (KeyError, ValidationError, GitHubError):
+        agent_configured = False
     return {
         "status": "ok",
         "database": "ok",
@@ -149,7 +157,9 @@ def ready(request: Request) -> dict:
         "receiver_configured": configured,
         "reply_sender_configured": reply_configured,
         "reply_worker_running": worker is not None and not worker.done(),
-        "agents": "pending",
+        "agent_configured": agent_configured,
+        "agent_dispatcher_running": dispatcher is not None and not dispatcher.done(),
+        "agents": "configured" if agent_configured else "not_configured",
     }
 
 

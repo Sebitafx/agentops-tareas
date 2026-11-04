@@ -105,3 +105,42 @@ def test_context_selection_does_not_include_private_tests():
     assert "tests/test_main.py" not in worker.visible_files("Cambia validacion", base)
     assert "taskapp/static/index.html" in worker.visible_files("Cambia el boton", base)
     assert "taskapp/static/style.css" in worker.visible_files("Cambia el color", base)
+
+
+def test_worker_deploy_success_requires_confirmation(monkeypatch):
+    calls = prepare(monkeypatch, Outcome("validated", "VALIDATION_PASSED", ()))
+
+    @contextmanager
+    def token(*_):
+        yield "fake-token"
+
+    monkeypatch.setattr(worker, "installation_token", token)
+
+    class Commit:
+        stdout = "a" * 40
+
+    monkeypatch.setattr(worker.subprocess, "run", lambda *_, **__: Commit())
+    monkeypatch.setattr(
+        worker,
+        "publish_pr",
+        lambda *_: {
+            "url": "https://github.com/Sebitafx/agentops-tareas/pull/1",
+            "run_url": "https://github.com/Sebitafx/agentops-tareas/actions/runs/123",
+        },
+    )
+    monkeypatch.setenv(
+        "RENDER_TASKS_DEPLOY_HOOK", "https://api.render.com/deploy/srv-test?key=fake"
+    )
+    monkeypatch.setattr(worker, "integrate_pr", lambda *_: "b" * 40)
+
+    class Deployment:
+        succeeded = True
+
+    monkeypatch.setattr(worker, "deploy_commit", lambda *_: Deployment())
+    assert worker.execute(uuid4(), "image", "123") == 0
+    assert [body["state"] for action, body in calls if action == "progress"] == [
+        "pr_open",
+        "merged",
+        "deploying",
+        "succeeded",
+    ]

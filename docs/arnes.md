@@ -2,8 +2,8 @@
 
 Un modelo propone cambios; el arnes decide que operaciones permite y cuando detenerse.
 El modelo no recibe comandos de shell, claves, infraestructura ni libertad de modificar
-el repositorio completo. El contrato, bucle y validador Docker estan implementados;
-aun falta conectar la creacion de PR y los mensajes almacenados de WhatsApp.
+el repositorio completo. El contrato, bucle, Docker y publicador estan conectados
+con los mensajes almacenados; la evidencia real de cada recorrido se registra aparte.
 
 ## Contrato
 
@@ -46,14 +46,16 @@ no sustituyen el aislamiento ni demuestran correccion funcional por si solos.
 
 GroqProposer usa el modelo comprobado openai/gpt-oss-120b, esfuerzo low, JSON Object
 Mode y contrato validado localmente. Limita contexto a 16000 caracteres y salida
-a 3072 tokens. Estos topes no garantizan cuota disponible; 429 detiene el trabajo.
+a 4096 tokens. Espera configurable entre llamadas (65 segundos en los workflows)
+para reducir rafagas; no garantiza cuota disponible. 429 detiene el trabajo.
 Fuente: [JSON de Groq](https://console.groq.com/docs/structured-outputs) y
 [parametros de razonamiento](https://console.groq.com/docs/reasoning).
 
-Agent proposal check ahora usa evaluation_check: pide una propuesta para una tarea
-sintetica, cambiar el limite de titulo de 200 a 180 y agregar pruebas. Solo envia
-schemas.py, un indice de rutas publicas y esa peticion ficticia. Verifica contrato,
-rutas, hashes y limites; prueba el candidato en Docker y permite hasta tres intentos.
+Agent proposal check usa evaluation_check con cuatro escenarios: limite de titulo,
+etiqueta de boton, buscador local y solicitud ambigua. Comparte solo los archivos
+pertinentes y un indice publico. Verifica contrato, rutas, hashes y limites; prueba
+el candidato en Docker y permite hasta tres intentos. Los tres cambios tienen
+oraculos independientes en las pruebas de referencia; la ambiguedad exige clarify.
 Guarda propuesta y evidencia como artefactos tres dias. No aplica el parche al
 checkout, crea PR ni despliega. Tampoco procesa mensajes personales de WhatsApp.
 El preflight anterior produjo status proposed sin ejecutar codigo; no confundir

@@ -19,9 +19,22 @@ def tasks_url(database):
     env = {
         key: value
         for key, value in os.environ.items()
-        if not key.startswith(("META_", "WHATSAPP_", "AGENT_APP_", "GROQ_", "GEMINI_"))
+        if not key.startswith(
+            (
+                "META_",
+                "WHATSAPP_",
+                "AGENT_APP_",
+                "GROQ_",
+                "GEMINI_",
+                "RENDER_",
+                "GH_",
+                "GITHUB_",
+                "ACTIONS_",
+            )
+        )
     }
     env["DATABASE_URL"] = os.environ["TEST_DATABASE_URL"]
+    env["SERVICE_ROLE"] = "tasks"
     process = subprocess.Popen(
         [
             sys.executable,
@@ -69,11 +82,11 @@ def test_browser_crud_filters_and_mobile(tasks_url):
         page.goto(tasks_url)
         page.get_by_label("Título de la tarea").fill("Preparar la demostración")
         page.get_by_label("Descripción").fill("Recorrer WhatsApp, revisión y despliegue.")
-        page.get_by_role("button", name="Crear tarea").click()
+        page.locator("#submit").click()
         expect(page.get_by_test_id("task-card")).to_have_count(1)
         page.get_by_role("button", name="Editar", exact=True).click()
         page.get_by_label("Título de la tarea").fill("Demostración preparada")
-        page.get_by_role("button", name="Guardar cambios").click()
+        page.locator("#submit").click()
         expect(page.get_by_role("heading", name="Demostración preparada")).to_be_visible()
         page.get_by_role("checkbox", name="Completar Demostración preparada").check()
         page.get_by_role("button", name="Pendientes", exact=True).click()
@@ -93,7 +106,7 @@ def test_browser_crud_filters_and_mobile(tasks_url):
         expect(page.get_by_test_id("task-card")).to_have_count(0)
         # Un titulo con HTML debe mostrarse como texto, sin ejecutarse.
         page.get_by_label("Título de la tarea").fill("<img src=x onerror=alert('xss')>")
-        page.get_by_role("button", name="Crear tarea").click()
+        page.locator("#submit").click()
         expect(page.get_by_test_id("task-card")).to_have_count(1)
         assert page.locator("#task-list img").count() == 0
         browser.close()

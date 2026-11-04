@@ -64,7 +64,7 @@ class GroqProposer:
                     {"role": "user", "content": context},
                 ],
                 "temperature": 0,
-                "max_completion_tokens": 3072,
+                "max_completion_tokens": 4096,
                 "reasoning_effort": "low",
                 "response_format": {"type": "json_object"},
                 "stream": False,

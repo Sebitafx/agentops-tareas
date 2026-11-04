@@ -146,12 +146,13 @@ def test_database_failure_not_acknowledged(client, monkeypatch, caplog) -> None:
     assert "private-host" not in response.text + caplog.text
 
 
-def test_readiness_reports_database_and_pending_agents(client) -> None:
+def test_readiness_reports_database_and_agent_configuration(client) -> None:
     response = client.get("/ready")
     assert response.status_code == 200
     assert response.json()["database"] == "ok"
     assert response.json()["receiver_configured"] is True
-    assert response.json()["agents"] == "pending"
+    assert response.json()["agents"] == "not_configured"
+    assert response.json()["agent_dispatcher_running"] is False
 
 
 def test_readiness_failure(client, monkeypatch) -> None:

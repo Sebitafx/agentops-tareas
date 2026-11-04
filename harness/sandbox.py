@@ -68,13 +68,15 @@ def check_candidate(candidate: dict[str, str], baseline: dict[str, str]) -> None
         )
 
 
-def container_command(image: str, folder: Path, name: str) -> list[str]:
+def container_command(image: str, folder: Path, name: str, scenario: str = "") -> list[str]:
     if not re.fullmatch(r"agentops-validator:[a-f0-9]{40}", image):
         raise ValueError("INVALID_VALIDATOR_IMAGE")
     if not re.fullmatch(r"agentops-validation-[a-f0-9]{32}", name):
         raise ValueError("INVALID_CONTAINER_NAME")
     if "," in str(folder):
         raise ValueError("INVALID_MOUNT_PATH")
+    if scenario not in {"", "title-limit", "button-label", "task-search"}:
+        raise ValueError("INVALID_VALIDATION_SCENARIO")
     return [
         "docker",
         "run",
@@ -101,6 +103,7 @@ def container_command(image: str, folder: Path, name: str) -> list[str]:
         "128m",
         "--tmpfs",
         "/tmp:rw,nosuid,nodev,size=768m,mode=1777",
+        *(["--env", "VALIDATION_SCENARIO=" + scenario] if scenario else []),
         "--mount",
         f"type=bind,source={folder.resolve()},target=/candidate,readonly",
         image,
@@ -108,11 +111,12 @@ def container_command(image: str, folder: Path, name: str) -> list[str]:
 
 
 class DockerValidator:
-    def __init__(self, root: Path, image: str, timeout: int = 240) -> None:
+    def __init__(self, root: Path, image: str, timeout: int = 240, scenario: str = "") -> None:
         self.root = root.resolve()
         self.baseline = load_snapshot(self.root)
         self.image = image
         self.timeout = timeout
+        self.scenario = scenario
         self.last_report: dict = {}
 
     def __call__(self, candidate: dict[str, str]) -> Validation:
@@ -128,7 +132,7 @@ class DockerValidator:
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(content.encode("utf-8"))
             name = "agentops-validation-" + uuid4().hex
-            command = container_command(self.image, stage, name)
+            command = container_command(self.image, stage, name, self.scenario)
             # El cliente Docker tampoco necesita las claves del proceso coordinador.
             env = {
                 key: value

@@ -1,6 +1,7 @@
 """Cola duradera y API privada para el workflow confiable; nunca ejecuta propuestas."""
 
 import asyncio
+import hashlib
 import hmac
 import logging
 from datetime import timedelta
@@ -44,7 +45,7 @@ class Claim(BaseModel):
 class Progress(BaseModel):
     model_config = ConfigDict(extra="forbid")
     lease: UUID
-    state: Literal["needs_input", "failed", "pr_open", "succeeded"]
+    state: Literal["needs_input", "failed", "pr_open", "merged", "deploying", "succeeded"]
     summary: str = Field(min_length=1, max_length=2500)
 
 
@@ -87,9 +88,13 @@ def update_job(database: Database, job_id: UUID, progress: Progress) -> None:
             raise HTTPException(409, "Ejecucion obsoleta")
         if row["state"] == progress.state and row["summary"] == progress.summary:
             return
-        if row["state"] not in {"running", "pr_open", "deploying"}:
-            raise HTTPException(409, "Transicion rechazada")
-        if row["state"] == "pr_open" and progress.state != "succeeded":
+        transitions = {
+            "running": {"needs_input", "failed", "pr_open"},
+            "pr_open": {"pr_open", "merged", "failed"},
+            "merged": {"deploying", "failed"},
+            "deploying": {"succeeded", "failed"},
+        }
+        if progress.state not in transitions.get(row["state"], set()):
             raise HTTPException(409, "Transicion rechazada")
         cursor.execute(
             "UPDATE agentops_jobs SET state=%s, summary=%s, updated_at=now() WHERE id=%s",
@@ -103,7 +108,8 @@ def update_job(database: Database, job_id: UUID, progress: Progress) -> None:
                 row["message_id"],
                 f"Solicitud {job_id}\n{progress.summary}",
                 row["sent_at"] + timedelta(hours=23),
-                f"job:{job_id}:{progress.lease}:{progress.state}",
+                f"job:{job_id}:{progress.lease}:{progress.state}:"
+                + hashlib.sha256(progress.summary.encode()).hexdigest()[:16],
             ),
         )
 
@@ -138,8 +144,10 @@ def dispatch_one(database: Database, settings: AppSettings) -> bool:
         conn.execute("""UPDATE agentops_jobs SET state='failed',
             summary='El agente no confirmo el inicio o la finalizacion. Requiere revision.', updated_at=now()
             WHERE (state='received' AND dispatch_attempts>=3 AND next_dispatch_at<now())
-            OR (state='running' AND updated_at<now()-interval '45 minutes')""")
-        if conn.execute("SELECT 1 FROM agentops_jobs WHERE state='running' LIMIT 1").fetchone():
+            OR (state IN ('running','pr_open','merged','deploying') AND updated_at<now()-interval '45 minutes')""")
+        if conn.execute(
+            "SELECT 1 FROM agentops_jobs WHERE state IN ('running','pr_open','merged','deploying') LIMIT 1"
+        ).fetchone():
             return False
         row = conn.execute("""SELECT j.id,j.dispatch_attempts,j.next_dispatch_at<=now(),
                 COALESCE(j.request_text,i.body),i.sent_at,j.message_id FROM agentops_jobs j

@@ -67,7 +67,7 @@ def help_text() -> str:
         "¡Hola! Soy AgentOps Tareas 🤖. Puedo preparar cambios de la aplicación, "
         "pedir aclaraciones, ejecutar pruebas y abrir un PR cuando el cambio apruebe.\n\n"
         "Escribe una petición concreta, usa ayuda o consulta estado <id>.\n"
-        "La integración y el despliegue automáticos todavía están pendientes.\n"
+        "La integración y el despliegue solo se intentan con protección y controles aprobados.\n"
         "No envíes secretos ni datos personales. Aplicación: " + APP_URL
     )
 

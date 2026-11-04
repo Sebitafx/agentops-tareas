@@ -33,6 +33,10 @@ def test_fixed_container_isolation_and_no_host_secret_forwarding(tmp_path):
         sandbox.container_command("untrusted:latest", tmp_path, name)
     with pytest.raises(ValueError):
         sandbox.container_command(IMAGE, tmp_path, "--privileged")
+    with pytest.raises(ValueError, match="INVALID_VALIDATION_SCENARIO"):
+        sandbox.container_command(IMAGE, tmp_path, name, "GROQ_API_KEY=private")
+    sample = sandbox.container_command(IMAGE, tmp_path, name, "button-label")
+    assert sample[sample.index("--env") + 1] == "VALIDATION_SCENARIO=button-label"
 
 
 def test_snapshot_loads_only_tracked_files_and_preserves_bytes(monkeypatch, tmp_path):

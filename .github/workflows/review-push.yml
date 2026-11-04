@@ -1,0 +1,49 @@
+name: Review developer push
+on:
+  push:
+    branches-ignore:
+      - main
+      - 'agentops/**'
+permissions:
+  contents: read
+concurrency:
+  group: agent-integration-and-deployment
+  cancel-in-progress: false
+jobs:
+  review:
+    if: github.repository == 'Sebitafx/agentops-tareas' && github.actor == 'Sebitafx' && !github.event.deleted
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+      - run: python -m pip install -r requirements-dev.txt
+      - name: Build trusted validator
+        run: |
+          BASE_SHA=$(git rev-parse HEAD)
+          docker build --file Dockerfile.validation --tag agentops-validator:$BASE_SHA .
+          echo "VALIDATOR_IMAGE=agentops-validator:$BASE_SHA" >> "$GITHUB_ENV"
+      - name: Review authorized source commit
+        env:
+          SOURCE_SHA: ${{ github.event.after }}
+          AGENT_APP_ID: ${{ secrets.AGENT_APP_ID }}
+          AGENT_APP_PRIVATE_KEY: ${{ secrets.AGENT_APP_PRIVATE_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_MIN_INTERVAL_SECONDS: '65'
+          RENDER_TASKS_DEPLOY_HOOK: ${{ secrets.RENDER_TASKS_DEPLOY_HOOK }}
+        run: python -m harness.review_push
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: push-review
+          path: |
+            artifacts/push-review.json
+            artifacts/latest-validation.json
+          retention-days: 3

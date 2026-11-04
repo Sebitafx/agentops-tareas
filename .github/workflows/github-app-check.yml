@@ -47,6 +47,7 @@ jobs:
           permission-contents: write
           permission-pull-requests: write
           permission-actions: write
+          permission-administration: read
       - name: Verify repository access without changing files or PRs
         env:
           GH_TOKEN: ${{ steps.repository-token.outputs.token }}

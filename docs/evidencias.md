@@ -235,3 +235,19 @@ tokens ni cargas originales de mensajes en este repositorio publico.
 - 282 pruebas locales aisladas aprobadas, cobertura 84.28%. Incluyen PostgreSQL y E2E.
 - Pendiente verificar esta version desplegada y un PR realmente originado en WhatsApp.
 - Integracion, despliegue autonomo y revisor por push siguen pendientes.
+
+## 3 de noviembre de 2026 — integracion y revisor preparados
+
+- Implementados integrador con proteccion/base/head/arbol, despliegue por SHA y
+  restauracion comprobada de codigo ante fallo; tests usan GitHub y Render simulados.
+- Revisor de pushes autorizado desde main confiable, reporte de reglas/lineas,
+  reparaciones acotadas, recomendaciones contextuales y PR. No ejecuta el push en host.
+- Suite aislada actual: 313 passed, 4 skipped, cobertura 81.78%; PostgreSQL y
+  Chromium reales, lint, formato y mypy correctos. Los omitidos son tres oraculos
+  activados por escenario y el broker que requiere Docker en host.
+- El E2E mantiene comprobaciones CRUD con selector estable #submit; benchmarks
+  adicionales verifican etiqueta del boton y busqueda independientemente del modelo.
+- Administration Read-only configurado por el participante. Pendiente evidencia
+  de token remoto con ese permiso, proteccion de main y recorridos reales completos.
+- Guias de activacion, escenarios, arquitectura y defensa agregadas. No se
+  acredita merge ni despliegue real con estas pruebas locales.

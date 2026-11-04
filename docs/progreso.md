@@ -1,52 +1,73 @@
 # Progreso verificable de los retos
 
-Actualizado el 3 de noviembre de 2026, hora de Lima. Este archivo es una lista de
-avance manual; no es un monitor en tiempo real ni ejecuta trabajo en segundo plano.
+Actualizado el 3 de noviembre de 2026, hora de Lima. Checklist manual: no ejecuta
+trabajo en segundo plano. Implementacion, validacion local y demostracion en la
+nube son evidencias diferentes.
 
-## Implementado y comprobado
+## Comprobado en la nube
 
-- [x] Gestor CRUD publico con PostgreSQL, filtros y pruebas E2E.
-- [x] Recepcion real de WhatsApp con firma, remitentes autorizados y deduplicacion.
-- [x] Respuesta real de ayuda y registro duradero de solicitudes.
-- [x] Contrato y politica de archivos para propuestas de IA, con tres intentos maximos.
-- [x] Generacion real de propuesta sintetica con Groq y validacion Docker aislada.
-- [x] Normalizacion de imports y formato mediante Ruff, sin ejecutar el texto propuesto.
-- [x] Publicador de PR implementado y probado con GitHub simulado.
-- [x] Suite local aislada de 264 pruebas aprobada y CI del codigo d29e17b aprobada.
+- [x] CRUD publico con PostgreSQL, filtros y API en agentops-tasks.
+- [x] Recepcion real de WhatsApp, firma, lista de remitentes y persistencia en Neon.
+- [x] Respuesta real de saludo/ayuda, registro de solicitudes y consulta de estado.
+- [x] Propuesta real de Groq validada en Docker, sin PR ni despliegue.
+- [x] CI aprobada del puente WhatsApp → Actions, commit daee926.
 
-La generacion real validada fue una prueba sintetica; no fue disparada por un
-mensaje del participante. El publicador aun no ha creado un PR real.
+[CI daee926](https://github.com/Sebitafx/agentops-tareas/actions/runs/41758314695).
+[Evaluacion real anterior](https://github.com/Sebitafx/agentops-tareas/actions/runs/41747916063).
+El receptor mostrado por el participante sigue en la version de respuestas;
+no hay evidencia aun de que ejecute el puente actualizado.
 
-## Siguiente implementacion: conectar WhatsApp con el agente
+## Implementado localmente, pendiente de publicar esta iteracion
 
-- [x] Implementar y probar despacho a Actions, consulta privada y callbacks con lease.
-- [ ] Verificar el despacho y callbacks con una solicitud real en la nube.
-- [ ] Ejecutar una solicitud real con IA, normalizacion y validacion aislada.
-- [x] Implementar y probar reanudacion de aclaraciones del mismo remitente.
-- [ ] Verificar la aclaracion real por WhatsApp.
-- [ ] Crear el primer PR real a partir del candidato validado.
-- [ ] Proteger main, exigir controles y revalidar base y contenido antes de integrar.
-- [ ] Desplegar el commit integrado, confirmar salud/version y gestionar fallos.
-- [ ] Responder por WhatsApp con PR, pruebas y version publicada.
+- [x] Despacho duradero a Actions, API privada, claim exclusivo y callbacks con lease.
+- [x] Aclaracion: retomar el mismo UUID solo con respuesta del mismo remitente.
+- [x] Ayuda natural: comandos y preguntas de capacidades no crean cambios.
+- [x] Propuestas acotadas, Ruff, maximo tres intentos y Docker sin red ni secretos.
+- [x] Publicacion de rama y PR con hashes y base comprobados.
+- [x] Integracion: proteccion estricta, CI aprobada y comprobacion de SHA/arbol.
+- [x] Despliegue por commit, comprobacion de salud/version y restauracion ante fallo.
+- [x] Revisor de pushes autorizado, hallazgos, reparacion, PR y prevencion de bucles.
+- [x] Pruebas de proveedores, fallos de CI/despliegue y concurrencia.
+- [x] Recorrido local webhook → PostgreSQL → Docker real → callbacks probado;
+      GitHub, IA y Render simulados en ese test.
+- [x] Benchmarks independientes de limite de titulo, texto del boton, buscador y aclaracion preparados.
+- [x] Guias de activacion, variables por servicio y matriz de validacion preparadas.
+- [x] Suite completa repetida tras corregir el fallo del comprobador de evaluacion:
+      313 pruebas aprobadas, cuatro casos separados omitidos y 81,78% de cobertura.
+      PostgreSQL, lint, formato, mypy y Chromium aprobados.
+- [ ] Publicar el commit final y comprobar CI y benchmarks reales en Actions.
 
-## Segundo reto y entrega
+## Configuracion de cuentas
 
-- [ ] Activar revision tras el push de un desarrollador autorizado.
-- [ ] Reportar convenciones con archivo/linea y preparar correcciones, evitando bucles.
-- [ ] Demostrar ambos recorridos, concurrencia y fallos con evidencia.
-- [ ] Completar guion de demostracion y defensa academica.
-- [ ] Resolver el uso del token temporal de WhatsApp para evitar renovaciones imprevistas.
+- [x] GitHub App instalada solo en este repositorio; secretos de Actions configurados.
+- [x] Variables de App en el receptor y hook de tareas en Actions configurados por el participante.
+- [x] Administration Read-only agregado segun confirmacion del participante;
+      pendiente de comprobar su emision de token desde Actions.
+- [ ] Proteger main: PR obligatorio, bootstrap-quality, base actualizada, sin bypass.
+- [ ] Desplegar manualmente la version final en Render y confirmar /version y /ready.
+- [ ] Resolver token temporal de WhatsApp o documentar su renovacion para la demo.
 
-## Donde revisar la evidencia
+## Demostracion final pendiente
 
-- [Historial de codigo](https://github.com/Sebitafx/agentops-tareas/commits/main/).
-- [Todas las ejecuciones de Actions](https://github.com/Sebitafx/agentops-tareas/actions).
-- [Ultima CI del codigo d29e17b](https://github.com/Sebitafx/agentops-tareas/actions/runs/41749200772).
-- [Propuesta real validada al primer intento](https://github.com/Sebitafx/agentops-tareas/actions/runs/41747916063).
-- [Aplicacion publicada](https://agentops-tasks.onrender.com/).
-- [Evidencias detalladas](evidencias.md).
+- [ ] Solicitud real WhatsApp → workflow → PR → merge → version publicada → respuesta.
+- [ ] Aclaracion real por WhatsApp y reanudacion de la misma solicitud.
+- [ ] Funcion nueva real solicitada y comprobada en navegador.
+- [ ] Push con incumplimientos y PR correctivo real; otro push valido.
+- [ ] Persistencia comprobada despues de redesplegar.
+- [x] Guion y preguntas de defensa academica preparados en demo.md y defensa.md.
+- [ ] Registrar evidencia de ambos recorridos completos.
 
-Actions muestra queued/in progress cuando existe una ejecucion activa y completed
-cuando termino. Las respuestas del chat o este checklist no crean un trabajo por
-si solos. El puente esta implementado y requiere despliegue y demostracion real;
-ver [solicitudes reales](solicitudes-reales.md). No confundir implementacion con evidencia.
+La revalidacion automatica de una base que cambia no esta implementada: se detiene
+con REVALIDATION_REQUIRED y exige repetir desde main actual. No se anuncia exito
+si la version y salud no quedan confirmadas. Ver [activacion](activacion-final.md),
+[matriz](validacion-final.md) y [revisor](revisor.md).
+
+## Donde mirar
+
+- [Actions](https://github.com/Sebitafx/agentops-tareas/actions): queued/in progress/completed.
+- [PR](https://github.com/Sebitafx/agentops-tareas/pulls): cambios y controles.
+- [Historial](https://github.com/Sebitafx/agentops-tareas/commits/main/).
+- [Aplicacion](https://agentops-tasks.onrender.com/).
+- [Evidencias](evidencias.md).
+
+Este archivo no sustituye una ejecucion activa ni acredita casos pendientes.

@@ -1,6 +1,8 @@
 """Transporte JSON acotado para los proveedores revisados. Sin reintentos ni redirects."""
 
 import json
+import os
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -8,6 +10,7 @@ import urllib.request
 MAX_RESPONSE_BYTES = 1048576
 ALLOWED_HOSTS = frozenset({"generativelanguage.googleapis.com", "api.groq.com"})
 USER_AGENT = "AgentOps-Tareas/0.1 (+https://github.com/Sebitafx/agentops-tareas)"
+_last_groq_started: float | None = None
 
 
 class CheckError(Exception):
@@ -22,6 +25,21 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
+def pace_groq() -> None:
+    global _last_groq_started
+    try:
+        interval = int(os.getenv("GROQ_MIN_INTERVAL_SECONDS", "0"))
+        if not 0 <= interval <= 120:
+            raise ValueError()
+    except ValueError:
+        raise CheckError("INVALID_PROVIDER_PACING") from None
+    if interval and _last_groq_started is not None:
+        wait = interval - (time.monotonic() - _last_groq_started)
+        if wait > 0:
+            time.sleep(wait)
+    _last_groq_started = time.monotonic()
+
+
 def request_json(url: str, headers: dict[str, str], payload: dict | None = None) -> dict:
     parts = urllib.parse.urlsplit(url)
     if (
@@ -31,6 +49,8 @@ def request_json(url: str, headers: dict[str, str], payload: dict | None = None)
         or parts.fragment
     ):
         raise CheckError("ENDPOINT_NOT_ALLOWED")
+    if parts.netloc == "api.groq.com" and parts.path.endswith("/chat/completions"):
+        pace_groq()
     request = urllib.request.Request(
         url,
         data=json.dumps(payload).encode() if payload is not None else None,

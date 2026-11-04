@@ -20,6 +20,10 @@ services:
         sync: false
       - key: WHATSAPP_TOKEN
         sync: false
+      - key: AGENT_APP_ID
+        sync: false
+      - key: AGENT_APP_PRIVATE_KEY
+        sync: false
       - key: META_GRAPH_VERSION
         value: v26.0
   - type: web

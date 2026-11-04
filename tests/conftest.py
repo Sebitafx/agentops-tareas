@@ -19,6 +19,7 @@ def isolated_environment(monkeypatch: pytest.MonkeyPatch) -> None:
         "SERVICE_ROLE",
         "AGENT_APP_ID",
         "AGENT_APP_PRIVATE_KEY",
+        "RENDER_TASKS_DEPLOY_HOOK",
     ):
         monkeypatch.delenv(key, raising=False)
 

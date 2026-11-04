@@ -1,114 +1,64 @@
 # AgentOps Tareas
 
-Dos retos academicos: solicitudes por WhatsApp que generan cambios y despliegues,
-y revision y correccion de Python tras cada push.
+Dos agentes academicos sobre un gestor de tareas Python 3.13 / FastAPI / PostgreSQL:
 
-## Estado real
+- WhatsApp → solicitud duradera → aclaracion o propuesta de IA → Docker aislado →
+  PR → controles y proteccion de main → integracion → Render → confirmacion por WhatsApp.
+- Push a una rama de desarrollo → Ruff, mypy, pytest y Chromium → revision contextual
+  → PR valido o correctivo → los mismos controles de integracion y despliegue.
 
-Ver [progreso verificable y pendientes](docs/progreso.md), con enlaces a codigo y
-ejecuciones. Es un checklist manual; las pruebas activas se ven en GitHub Actions.
+Aplicacion: [AgentOps Tareas](https://agentops-tasks.onrender.com/).
+Usar datos ficticios: la lista es compartida y no tiene login.
 
-Recorrido real WhatsApp -> Meta -> Render -> PostgreSQL verificado: un mensaje del
-participante autorizado quedo guardado en Neon y confirmado en los logs del receptor.
-El callback HTTPS, el campo messages y la suscripcion de la app a la WABA estan configurados.
+## Estado y puesta en marcha
 
-Implementado: salud, version, handshake, migracion PostgreSQL y bandeja duradera
-de mensajes con firma HMAC, lista de remitentes autorizados y deduplicacion.
-Probado con PostgreSQL local y conexion real con Neon verificada desde `/ready`.
-Gestor CRUD y filtros implementado, con API, UI y E2E. Desplegado y comprobado en
-https://agentops-tasks.onrender.com/. Configuracion en [gestor de tareas](docs/tareas.md).
-Contrato, politica de propuestas, bucle y validacion aislada Docker implementados.
-Falta conectar PR y solicitudes reales; ver [arnes](docs/arnes.md).
-El [puente de solicitudes a PR](docs/solicitudes-reales.md) esta implementado y
-probado localmente; su despliegue y recorrido real siguen pendientes de confirmar.
-Respuestas WhatsApp de ayuda, registro y estado implementadas; envio real de hola
-y respuesta de ayuda confirmado por el participante. Ver [respuestas](docs/respuestas-whatsapp.md).
-Pendiente: agentes, PR automaticos y despliegue
-autonomo. Guardar un mensaje no ejecuta una correccion todavia.
+El CRUD y el intercambio real de mensajes estan comprobados. Los agentes estan
+implementados y tienen pruebas locales; la demostracion completa en la nube se
+registra por separado en [progreso](docs/progreso.md) y [evidencias](docs/evidencias.md).
+Una prueba con proveedores simulados no acredita un despliegue real.
 
-## Ejecutar localmente (PowerShell)
+Seguir [activacion final y despliegue](docs/activacion-final.md). Incluye variables
+por servicio, proteccion de main, token de WhatsApp y pruebas del participante.
+El agente no puede modificar workflows, dependencias, migraciones ni evaluaciones.
+
+## Instalacion local
 
 ```powershell
 python -m venv .venv
 .venv/Scripts/python -m pip install -r requirements-dev.txt
-$env:META_VERIFY_TOKEN = 'elige-un-valor-privado'
-.venv/Scripts/python -m uvicorn bootstrap.main:app --port 8000 --no-access-log
+$env:SERVICE_ROLE = 'tasks'
+# Configurar DATABASE_URL en privado con una base de desarrollo.
+.venv/Scripts/python -m bootstrap.serve
 ```
 
-Las variables de `.env.example` documentan la configuracion; el servidor no carga
-archivos `.env` automaticamente. Configurar variables en la consola o en Render.
-Nunca compartir tokens, archivos `.env` ni claves privadas en el repositorio.
+El servidor no carga .env automaticamente. [.env.example](.env.example) documenta
+variables; nunca subir valores privados. Las migraciones versionadas se aplican
+al arrancar, con transaccion, checksum y advisory lock.
 
-## Validacion
+## Validacion reproducible
 
 ```powershell
-.venv/Scripts/python -m pytest -q
 .venv/Scripts/python -m ruff check bootstrap harness taskapp tests
 .venv/Scripts/python -m ruff format --check bootstrap harness taskapp tests
-.venv/Scripts/python -m mypy
+$sha = git rev-parse HEAD
+docker build --file Dockerfile.validation --tag "agentops-validator:$sha" .
+.venv/Scripts/python -m harness.sandbox --image "agentops-validator:$sha"
 ```
 
-## Publicar el servicio minimo en Render
+El contenedor tiene PostgreSQL de prueba, Chromium y dependencias preinstaladas.
+Ejecuta lint, formato, tipos, pytest y cobertura >=80%, sin red externa, secretos,
+privilegios ni escritura en la raiz. Las pruebas de referencia son inmutables.
+Los benchmarks de IA se activan aparte; [matriz de validacion](docs/validacion-final.md).
 
-1. Crear una cuenta en Render o iniciar sesion con GitHub.
-2. Crear un **Web Service**, conectar este repositorio y seleccionar `main`.
-3. Elegir runtime **Docker**, plan **Free** y health check `/health`.
-4. Configurar `META_VERIFY_TOKEN` con un valor privado elegido por ti. Es un token
-   de verificacion propio, distinto del token de acceso generado por Meta.
-5. Desactivar Auto-Deploy: los despliegues de esta etapa son manuales. Los
-   despliegues automaticos controlados por el pipeline se implementaran despues.
-6. Desplegar y verificar `/health` y `/version` en la URL de Render.
-7. En Meta, la URL de callback sera `https://TU-SERVICIO.onrender.com/webhooks/whatsapp`.
-   Usar exactamente el mismo `META_VERIFY_TOKEN` para verificar el callback.
+## Documentacion
 
-El esquema se inicializa al arrancar, dentro de una transaccion y con un lock de
-transaccion para evitar carreras entre instancias. Cada migracion tiene checksum;
-una migracion aplicada no se edita. No hay borrados ni reversiones automaticas de datos.
+- [Arquitectura y defensa academica](docs/defensa.md).
+- [Guion de demostracion](docs/demo.md).
+- [Convenciones Python](docs/convenciones-python.md).
+- [Arnes y limites](docs/arnes.md), [aislamiento](docs/validacion-aislada.md).
+- [Solicitudes y estados](docs/solicitudes-reales.md), [revision de pushes](docs/revisor.md).
+- [Diagnostico de WhatsApp](docs/diagnostico-whatsapp.md), [privacidad](docs/privacidad.md).
 
-`/health` comprueba que el servidor responde. `/ready` comprueba PostgreSQL y el
-esquema: devuelve 200 con `database: ok` cuando estan disponibles, o 503 ante un fallo.
-El campo `receiver_configured` indica si estan presentes los ajustes de recepcion;
-`agents: pending` deja claro que los agentes aun no estan implementados.
-Los errores de conexion se registran por clase, sin imprimir DSN ni contrasenas.
-
-Las peticiones POST solo se confirman despues del commit en PostgreSQL. Las
-transacciones de psycopg confirman al salir del contexto o revierten si hay un error:
-https://www.psycopg.org/psycopg3/docs/basic/transactions.html
-
-Un handshake exitoso solo prueba el GET de verificacion, no la recepcion completa.
-El aviso actual del panel de Meta exige publicar la aplicacion para entregar datos
-de produccion. Revisar esos requisitos antes de asumir que un mensaje del telefono
-llegara al callback; las pruebas enviadas desde el panel son una evidencia distinta.
-
-Render Free puede suspender el servicio por inactividad. No agregar metodo de pago
-ni cambiar de plan para esta demo sin revisar primero sus condiciones y cuotas.
-
-## Proximas etapas
-
-1. Verificar persistencia del gestor despues de redesplegar.
-2. Validar respuesta por WhatsApp y ejecutar correcciones en contenedor aislado.
-3. Conectar solicitudes almacenadas con las ejecuciones de los agentes.
-4. Implementar arnes, revision y correcciones aisladas.
-5. Proteger main, automatizar integracion y despliegue con comprobacion del SHA.
-6. Ejecutar los dos recorridos reales y preparar evidencias y defensa.
-
-Ver [conexion y comprobacion del almacenamiento](docs/almacenamiento.md).
-Si falla una entrega, ver [diagnostico WhatsApp](docs/diagnostico-whatsapp.md).
-
-Paginas publicas: `/privacy` y `/data-deletion`. Ver
-[configuracion de privacidad y atencion de solicitudes](docs/privacidad.md).
-
-El workflow **Gemini API check** verifica acceso al modelo con una peticion
-sintetica desde main. Configuracion y limites en [verificacion Gemini](docs/gemini.md).
-El primer intento remoto fallo por timeout de red, sin confirmar la clave ni la cuota.
-**Groq API check** confirmo acceso y una generacion real con openai/gpt-oss-120b,
-usando el secreto independiente GROQ_API_KEY. Esto no mide cuota restante ni calidad
-de correccion de codigo. Ver [verificacion Groq](docs/groq.md).
-Ninguno de los controles procesa mensajes reales de WhatsApp.
-
-**GitHub App check** valida la app dedicada, el alcance de un unico repositorio y
-la emision de tokens con permisos acotados. No modifica archivos ni crea PR en
-esa prueba. Ver [GitHub App](docs/github-app.md).
-La ejecucion real de la GitHub App confirmo un unico repositorio, tokens con los
-permisos solicitados y consultas correctas; ambos tokens se revocaron al terminar.
-Las [convenciones Python](docs/convenciones-python.md) definen el criterio de revision.
+Los servicios gratuitos pueden suspenderse por inactividad y las cuotas de IA son
+limitadas. No se activa facturacion. Un fallo detiene el trabajo y conserva evidencia;
+el estado succeeded exige comprobar el commit publicado, salud y acceso a PostgreSQL.

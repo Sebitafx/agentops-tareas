@@ -15,7 +15,7 @@ jobs:
   request:
     if: github.repository == 'Sebitafx/agentops-tareas' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
         with:
@@ -37,6 +37,8 @@ jobs:
           AGENT_APP_ID: ${{ secrets.AGENT_APP_ID }}
           AGENT_APP_PRIVATE_KEY: ${{ secrets.AGENT_APP_PRIVATE_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_MIN_INTERVAL_SECONDS: '65'
+          RENDER_TASKS_DEPLOY_HOOK: ${{ secrets.RENDER_TASKS_DEPLOY_HOOK }}
         run: python -m harness.request_worker --job-id "$JOB_ID" --image "$VALIDATOR_IMAGE"
       - uses: actions/upload-artifact@v4
         if: always()

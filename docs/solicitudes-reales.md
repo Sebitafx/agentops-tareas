@@ -45,9 +45,13 @@ y botones, CSS/HTML para estilos, Python para logica del servidor. Es una selecc
 acotada, no una herramienta general de exploracion. Una solicitud amplia puede
 requerir aclaracion, exceder contexto o detenerse; no se garantiza cualquier cambio.
 
-No integra ni despliega aun: el callback pr_open lo informa expresamente. Se necesita
-conectar la comprobacion final de base/head, proteccion de main y despliegue por SHA.
-El segundo reto de revision de pushes sigue pendiente.
+Con RENDER_TASKS_DEPLOY_HOOK en Actions, comprueba proteccion estricta y espera CI
+del head antes de integrar. Vuelve a comprobar base y head, usa merge con SHA y
+verifica padres y arbol del resultado. Despliega ese commit y comprueba /version,
+/health, /ready y lectura de tareas antes de succeeded. Si falla, intenta restaurar
+el commit anterior y registra resultado; no revierte datos. Sin hook queda pr_open.
+Una base que cambia detiene la operacion y requiere repetir desde la base actual.
+El segundo reto usa la misma integracion: ver [revisor](revisor.md).
 
 ## Activacion y prueba
 

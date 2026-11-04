@@ -22,7 +22,7 @@ from bootstrap.github_app import (
     github_json,
     installation_token,
 )
-from bootstrap.outbox import help_text, is_help
+from bootstrap.outbox import MENU, help_text, is_help
 
 logger = logging.getLogger("uvicorn.error.agentops")
 router = APIRouter(prefix="/internal/jobs", include_in_schema=False)
@@ -106,7 +106,14 @@ def update_job(database: Database, job_id: UUID, progress: Progress) -> None:
             (
                 uuid4(),
                 row["message_id"],
-                f"Solicitud {job_id}\n{progress.summary}",
+                f"Solicitud {job_id}\n{progress.summary}"
+                + (
+                    f"\nResponde: responder {job_id} <detalle>"
+                    if progress.state == "needs_input"
+                    else ""
+                )
+                + "\n\n"
+                + MENU,
                 row["sent_at"] + timedelta(hours=23),
                 f"job:{job_id}:{progress.lease}:{progress.state}:"
                 + hashlib.sha256(progress.summary.encode()).hexdigest()[:16],

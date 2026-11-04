@@ -96,9 +96,12 @@ def send_text(settings: OutboundSettings, reply: PendingReply) -> str:
         status = exc.code
         # Solo se conserva el codigo numerico, nunca el mensaje crudo de Meta.
         try:
-            error_code = json.loads(exc.read(65536)).get("error", {}).get("code")
+            details = json.loads(exc.read(65536)).get("error", {})
+            error_code = details.get("code")
+            subcode = details.get("error_subcode")
         except (ValueError, AttributeError, OSError):
             error_code = None
+            subcode = None
         finally:
             exc.close()
         if type(error_code) is not int:
@@ -109,7 +112,12 @@ def send_text(settings: OutboundSettings, reply: PendingReply) -> str:
             raise SendError("REPLY_WINDOW_CLOSED") from None
         if status == 429 or error_code in {4, 17, 32, 613, 130429, 131056}:
             raise SendError("WHATSAPP_RATE_LIMIT", retryable=True) from None
-        raise SendError("WHATSAPP_HTTP_ERROR_" + str(status), uncertain=status >= 500) from None
+        reason = "WHATSAPP_HTTP_ERROR_" + str(status)
+        if type(error_code) is int and 0 <= error_code <= 2147483647:
+            reason += "_META_" + str(error_code)
+        if type(subcode) is int and 0 <= subcode <= 2147483647:
+            reason += "_SUB_" + str(subcode)
+        raise SendError(reason, uncertain=status >= 500) from None
     except (urllib.error.URLError, TimeoutError, OSError):
         raise SendError("WHATSAPP_NETWORK_ERROR", uncertain=True) from None
     except (ValueError, KeyError, IndexError, TypeError):

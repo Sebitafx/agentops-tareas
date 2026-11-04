@@ -1,10 +1,28 @@
 # Progreso verificable de los retos
 
-Actualizado el 3 de noviembre de 2026, hora de Lima. Checklist manual: no ejecuta
+Actualizado el 4 de noviembre de 2026, hora de Lima. Checklist manual: no ejecuta
 trabajo en segundo plano. Implementacion, validacion local y demostracion en la
 nube son evidencias diferentes.
 
 ## Comprobado en la nube
+
+- [x] Receptor observado en 1ae84ea con base, respuestas y despachador activos.
+- [ ] Confirmar envio con el nuevo token de sistema: /me y lectura del numero
+      correctos segun capturas; POST de envio pendiente. El 400 actual no distingue
+      causa con el codigo desplegado, por eso se agrega diagnostico numerico.
+
+## Iteracion de comandos y diagnostico (rama de mantenimiento)
+
+- [x] Listado de palabras clave en bienvenida, respuestas y callbacks.
+- [x] Sin comando valido no se crea job ni se reanuda una aclaracion.
+- [x] responder UUID detalle exige remitente propietario y estado needs_input.
+- [x] Codigos y subcodigos Meta numericos en fallos genericos, sin cuerpo privado.
+- [x] 59 pruebas especificas con PostgreSQL local aprobadas; lint y formato correctos.
+- [x] Suite completa aislada: 337 pruebas aprobadas, cuatro escenarios separados
+      omitidos, cobertura 82,34%; PostgreSQL y Chromium reales, lint/formato/tipos.
+- [ ] Publicacion por PR, CI y despliegue de esta iteracion.
+
+## Evidencia anterior (conservar alcance y fecha de cada prueba)
 
 - [x] CRUD publico con PostgreSQL, filtros y API en agentops-tasks.
 - [x] Recepcion real de WhatsApp, firma, lista de remitentes y persistencia en Neon.

@@ -13,7 +13,7 @@ import pytest
 from bootstrap import outbound
 from bootstrap.database import DeliveryStatus, IncomingMessage
 from bootstrap.outbound import OutboundSettings, SendError, dispatch_one, send_text
-from bootstrap.outbox import HELP, PendingReply, ReplyStore
+from bootstrap.outbox import HELP, MENU, PendingReply, ReplyStore
 
 
 def incoming(text="hola", sender="51900000001", age=0):
@@ -75,6 +75,50 @@ def test_support_commands_dont_create_jobs(database, text, expected):
     reply = ReplyStore(database).claim()
     assert expected in reply.body
     assert counts(database) == (1, 1, 0)
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["buenas", "haz algo", "quiero cambiar el color", "cambiar", "agregar:  ", "cambiarTodo azul"],
+)
+def test_unknown_or_empty_commands_never_create_job(database, text):
+    database.save([incoming(text)], [])
+    reply = ReplyStore(database).claim()
+    assert "no registré" in reply.body and MENU in reply.body
+    assert counts(database) == (1, 1, 0)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "cambiar el encabezado por Mis tareas",
+        "CORREGIR: el filtro no funciona",
+        "agregar un buscador",
+        "Cambia el texto",
+        "corrige el filtro",
+        "agrega un filtro",
+    ],
+)
+def test_explicit_commands_create_one_job_with_menu(database, text):
+    database.save([incoming(text)], [])
+    assert counts(database) == (1, 1, 1)
+    assert MENU in ReplyStore(database).claim().body
+
+
+def test_meta_numeric_diagnostic_does_not_leak_provider_text(monkeypatch):
+    raw = json.dumps(
+        {"error": {"code": 100, "error_subcode": 33, "message": "private-token-and-phone"}}
+    ).encode()
+    fake_transport(
+        monkeypatch,
+        exception=urllib.error.HTTPError(
+            "https://graph.facebook.com", 400, "private", {}, io.BytesIO(raw)
+        ),
+    )
+    with pytest.raises(SendError) as failure:
+        send_text(settings(), pending())
+    assert failure.value.reason == "WHATSAPP_HTTP_ERROR_400_META_100_SUB_33"
+    assert "private" not in str(failure.value)
 
 
 def test_batch_failure_rolls_back_replies_and_jobs(database):
@@ -209,8 +253,8 @@ def test_text_uses_fixed_graph_endpoint_and_bearer_header(monkeypatch):
         (400, 131047, "REPLY_WINDOW_CLOSED", False, False),
         (429, 4, "WHATSAPP_RATE_LIMIT", True, False),
         (400, 131056, "WHATSAPP_RATE_LIMIT", True, False),
-        (403, 10, "WHATSAPP_HTTP_ERROR_403", False, False),
-        (500, 1, "WHATSAPP_HTTP_ERROR_500", False, True),
+        (403, 10, "WHATSAPP_HTTP_ERROR_403_META_10", False, False),
+        (500, 1, "WHATSAPP_HTTP_ERROR_500_META_1", False, True),
     ],
 )
 def test_safe_meta_errors(monkeypatch, status, code, reason, retryable, uncertain):

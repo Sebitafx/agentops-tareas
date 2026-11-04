@@ -15,7 +15,7 @@ hasta ver el resultado de la anterior. Tiempo de compilacion y cuota pueden vari
 4. Abrir la web, crear/editar una tarea ficticia, confirmar etiqueta nueva incluso
    despues de guardar. Comparar /version con el commit de merge y respuesta final.
 5. Ambiguedad: Cambia un boton. Debe preguntar que boton y como cambiarlo, sin PR.
-   Responder: El boton de crear; cambia Agregar tarea por Crear tarea y conserva CRUD.
+   Responder: responder <id> El boton de crear; cambia Agregar tarea por Crear tarea y conserva CRUD.
    Confirmar que se retoma el mismo UUID con nuevo workflow.
 6. Funcion nueva: Agrega un buscador local por titulo, sin distinguir mayusculas.
    Usa id task-search y etiqueta Buscar tareas. Al borrar la busqueda muestra todas

@@ -18,13 +18,57 @@ if TYPE_CHECKING:
     from bootstrap.database import Database, IncomingMessage
 
 APP_URL = "https://agentops-tasks.onrender.com/"
+MENU = (
+    "Lista de comandos y palabras clave (al comienzo del mensaje):\n"
+    "• hola / ayuda: ver estas reglas.\n"
+    "• estado <id>: consultar una solicitud.\n"
+    "• cambiar <petición> (también: cambia).\n"
+    "• corregir <problema> (también: corrige).\n"
+    "• agregar <función> (también: agrega).\n"
+    "• responder <id> <detalle>: contestar una aclaración.\n"
+    'Ejemplo: cambiar el encabezado "Una cosa a la vez" por "Mis tareas".\n'
+    "Incluye el resultado esperado. Sin un comando válido no se crea ni se reanuda una solicitud."
+)
 HELP = (
     "¡Hola! Soy AgentOps Tareas 🤖. Ya puedo recibir y responder por WhatsApp.\n\n"
-    "Escribe una petición de cambio para registrarla, o usa:\n"
-    "• ayuda: ver estos comandos\n• estado <id>: consultar una solicitud tuya\n\n"
-    "El agente de corrección todavía está en conexión; aún no modifico ni despliego código.\n"
-    "Aplicación de demostración: " + APP_URL
+    + MENU
+    + "\n\nEl agente de corrección aún no está configurado. Aplicación: "
+    + APP_URL
 )
+
+
+def change_command(text: str) -> bool:
+    match = re.fullmatch(
+        r"/?(cambiar|cambia|corregir|corrige|agregar|agrega)(?:\s*:\s*|\s+)(.+)",
+        text.strip(),
+        re.IGNORECASE | re.DOTALL,
+    )
+    return bool(match and match[2].strip())
+
+
+def resume_command(conn: psycopg.Connection, message: IncomingMessage) -> str:
+    parts = message.body.strip().split(maxsplit=2)
+    if len(parts) != 3 or not parts[2].strip():
+        return "Usa responder <id> <detalle>. No se reanudó ninguna solicitud."
+    try:
+        job_id = UUID(parts[1])
+    except ValueError:
+        return "El id no tiene un formato válido. No se reanudó ninguna solicitud."
+    waiting = conn.execute(
+        """SELECT COALESCE(j.request_text,i.body),j.summary
+        FROM agentops_jobs j JOIN agentops_inbox i ON i.message_id=j.message_id
+        WHERE j.id=%s AND i.sender=%s AND j.state='needs_input' FOR UPDATE OF j""",
+        (job_id, message.sender),
+    ).fetchone()
+    if not waiting:
+        return "No encontré una aclaración pendiente con ese id asociada a tu número."
+    conn.execute(
+        """UPDATE agentops_jobs SET request_text=%s, state='received',
+        dispatch_attempts=0,worker_run_id=NULL,lease=NULL,next_dispatch_at=now(),
+        updated_at=now() WHERE id=%s""",
+        (waiting[0] + "\nPregunta del agente: " + waiting[1] + "\nAclaracion: " + parts[2], job_id),
+    )
+    return f"Aclaración recibida ✅\nSolicitud {job_id}. Intentaré reanudar el agente."
 
 
 def is_help(text: str) -> bool:
@@ -66,14 +110,15 @@ def help_text() -> str:
     return (
         "¡Hola! Soy AgentOps Tareas 🤖. Puedo preparar cambios de la aplicación, "
         "pedir aclaraciones, ejecutar pruebas y abrir un PR cuando el cambio apruebe.\n\n"
-        "Escribe una petición concreta, usa ayuda o consulta estado <id>.\n"
-        "La integración y el despliegue solo se intentan con protección y controles aprobados.\n"
+        + MENU
+        + "\n"
+        + "La integración y el despliegue solo se intentan con protección y controles aprobados.\n"
         "No envíes secretos ni datos personales. Aplicación: " + APP_URL
     )
 
 
 def queue_receipt(conn: psycopg.Connection, message: IncomingMessage) -> None:
-    normalized = message.body.strip().casefold()
+    normalized = " ".join(message.body.split()).casefold()
     if is_help(message.body):
         reply = help_text()
     elif normalized == "estado":
@@ -103,35 +148,16 @@ def queue_receipt(conn: psycopg.Connection, message: IncomingMessage) -> None:
                     reply += "\n" + row[1][:2400]
             else:
                 reply = "No encontré esa solicitud entre las asociadas a tu número."
+    elif normalized == "responder" or normalized.startswith("responder "):
+        reply = resume_command(conn, message)
+    elif not change_command(message.body):
+        reply = "Comando no válido o sin detalle. Respeta las reglas: no registré ninguna solicitud de cambio."
     else:
-        waiting = conn.execute(
-            """SELECT j.id, COALESCE(j.request_text,i.body),j.summary
-            FROM agentops_jobs j JOIN agentops_inbox i ON i.message_id=j.message_id
-            WHERE i.sender=%s AND j.state='needs_input' ORDER BY j.updated_at DESC
-            LIMIT 1 FOR UPDATE OF j""",
-            (message.sender,),
-        ).fetchone()
-        if waiting:
-            job_id = waiting[0]
-            conn.execute(
-                """UPDATE agentops_jobs SET request_text=%s, state='received',
-                dispatch_attempts=0,worker_run_id=NULL,lease=NULL,next_dispatch_at=now(),
-                updated_at=now() WHERE id=%s""",
-                (
-                    waiting[1]
-                    + "\nPregunta del agente: "
-                    + waiting[2]
-                    + "\nAclaracion: "
-                    + message.body,
-                    job_id,
-                ),
-            )
-        else:
-            job_id = uuid4()
-            conn.execute(
-                "INSERT INTO agentops_jobs (id, message_id) VALUES (%s, %s)",
-                (job_id, message.message_id),
-            )
+        job_id = uuid4()
+        conn.execute(
+            "INSERT INTO agentops_jobs (id, message_id) VALUES (%s, %s)",
+            (job_id, message.message_id),
+        )
         reply = (
             f"Recibí tu petición ✅\nId: {job_id}\nEstado: received (recibida y guardada).\n\n"
             "El agente de corrección todavía está en conexión. No he cambiado código ni desplegado.\n"
@@ -143,6 +169,8 @@ def queue_receipt(conn: psycopg.Connection, message: IncomingMessage) -> None:
                 "Si falta información, te preguntaré por aquí.\n"
                 f"Consulta: estado {job_id}\nAún no se confirma ningún cambio ni despliegue."
             )
+    if MENU not in reply:
+        reply += "\n\n" + MENU
     conn.execute(
         """INSERT INTO agentops_outbox (id, message_id, body, expires_at, event_key)
            VALUES (%s, %s, %s, %s, %s)""",

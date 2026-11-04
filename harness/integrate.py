@@ -26,6 +26,12 @@ def check_protection(data: dict) -> None:
     ):
         raise IntegrationError("MAIN_PROTECTION_REQUIRED")
     allowances = reviews.get("bypass_pull_request_allowances", {})
+    if (
+        reviews.get("required_approving_review_count", 0) > 0
+        or reviews.get("require_code_owner_reviews")
+        or reviews.get("require_last_push_approval")
+    ):
+        raise IntegrationError("HUMAN_REVIEW_REQUIRED_BY_MAIN")
     if any(item.get("slug") == APP_SLUG for item in allowances.get("apps", [])):
         raise IntegrationError("BOT_MUST_NOT_BYPASS_PROTECTION")
 

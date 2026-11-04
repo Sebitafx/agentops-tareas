@@ -78,17 +78,29 @@ def check_repository() -> dict:
     }
 
 
+def check_main_protection() -> dict:
+    from harness.integrate import IntegrationError, check_protection
+
+    try:
+        check_protection(github_get(f"/repos/{REPOSITORY}/branches/main/protection"))
+    except IntegrationError as exc:
+        raise ScopeError(str(exc)) from None
+    return {"status": "ok", "main_protection_verified": True, "administration_read": True}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=["installation", "repository"])
+    parser.add_argument("mode", choices=["installation", "repository", "protection"])
     args = parser.parse_args()
     try:
         if os.getenv("AGENT_APP_SLUG") != APP_SLUG:
             raise ScopeError("UNEXPECTED_APP")
         if args.mode == "installation":
             summary = validate_scope(github_get("/installation/repositories?per_page=100"))
-        else:
+        elif args.mode == "repository":
             summary = check_repository()
+        else:
+            summary = check_main_protection()
     except ScopeError as exc:
         print(json.dumps({"status": "failed", "reason": str(exc)}))
         return 1

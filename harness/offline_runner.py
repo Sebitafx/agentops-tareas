@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 import resource
 import subprocess
 import sys
@@ -58,8 +59,24 @@ def command(name: str, argv: list[str], env: dict[str, str], timeout: int = 120)
     except subprocess.TimeoutExpired:
         code = 124
     # Nunca devolver salida ilimitada al modelo o al proceso coordinador.
-    diagnostics = log.read_bytes()[-6000:].decode("utf-8", errors="replace")
-    return {"name": name, "exit_code": code, "diagnostics": diagnostics}
+    diagnostics = log.read_bytes().decode("utf-8", errors="replace")
+    coverage = re.search(r"Total coverage: ([0-9.]+)%", diagnostics) if name == "tests" else None
+    if name == "tests":
+        # La tabla de cobertura no debe desplazar la causa del fallo del feedback.
+        diagnostics = re.sub(
+            r"---------- coverage:.*?Required test coverage[^\n]*\n",
+            "",
+            diagnostics,
+            flags=re.DOTALL,
+        )
+    if len(diagnostics) > 6000:
+        diagnostics = diagnostics[:4500] + "\n[diagnostico acotado]\n" + diagnostics[-1400:]
+    return {
+        "name": name,
+        "exit_code": code,
+        "diagnostics": diagnostics,
+        **({"coverage_percent": float(coverage[1])} if coverage else {}),
+    }
 
 
 def main() -> int:

@@ -105,6 +105,16 @@ def test_validator_stages_readonly_copy_and_requires_complete_success(monkeypatc
     assert json.loads((tmp_path / "artifacts/latest-validation.json").read_text())["passed"]
 
 
+def test_failure_cause_is_not_displaced_by_diagnostic_tail(monkeypatch, tmp_path):
+    value = report(False)
+    value["stages"][-1].update(exit_code=1, diagnostics="ACTUAL_CAUSE\n" + "x" * 7000)
+    fake_docker(monkeypatch, json.dumps(value).encode(), code=1)
+    validator = sandbox.DockerValidator(tmp_path, IMAGE)
+    result = validator(dict(BASE))
+    assert not result.passed and result.feedback.startswith("tests: ACTUAL_CAUSE")
+    assert len(result.feedback) <= 4000
+
+
 @pytest.mark.parametrize(
     "variant",
     [

@@ -38,6 +38,8 @@ Son pruebas de referencia; el modelo no puede reemplazarlas.
 El E2E general usa #submit para no fijar la etiqueta del boton que la demo solicita
 cambiar. Conserva todas las operaciones y aserciones CRUD. El benchmark comprueba
 la nueva etiqueta incluso despues de guardar, evitando aprobar un cambio solo en HTML.
+Se tolera la flecha decorativa del boton y se selecciona el textbox por rol para no
+confundirlo con un contenedor search que tenga la misma etiqueta accesible.
 
 ## Evidencia pendiente en la nube
 

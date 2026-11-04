@@ -23,6 +23,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+      - run: python -m pip install -r requirements.txt
       - name: Create metadata-only installation token
         id: scope-token
         uses: actions/create-github-app-token@v3
@@ -36,7 +37,7 @@ jobs:
           GH_TOKEN: ${{ steps.scope-token.outputs.token }}
           AGENT_APP_SLUG: ${{ steps.scope-token.outputs.app-slug }}
         run: python -m harness.github_check installation
-      - name: Request required permissions for this repository only
+      - name: Request repository permissions and protection read access
         id: repository-token
         uses: actions/create-github-app-token@v3
         with:
@@ -53,3 +54,8 @@ jobs:
           GH_TOKEN: ${{ steps.repository-token.outputs.token }}
           AGENT_APP_SLUG: ${{ steps.repository-token.outputs.app-slug }}
         run: python -m harness.github_check repository
+      - name: Verify strict main protection without modifying settings
+        env:
+          GH_TOKEN: ${{ steps.repository-token.outputs.token }}
+          AGENT_APP_SLUG: ${{ steps.repository-token.outputs.app-slug }}
+        run: python -m harness.github_check protection

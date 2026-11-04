@@ -20,6 +20,11 @@ Si falta un requisito que afecte al resultado, action=clarify con una pregunta.
 Rechaza peticiones fuera de alcance con action=refuse. Para cambios, devuelve el
 contenido completo de hasta 4 archivos y sus hashes base exactos (null para nuevos).
 Las funciones nuevas o correcciones de logica necesitan una prueba de comportamiento.
+Para UI esta instalado playwright.sync_api, NO pytest-playwright: no existen
+fixtures page, browser ni context. Usa sync_playwright y browser.new_page dentro
+del test. Puedes importar la fixture de servidor con:
+from tests.test_tasks_e2e import tasks_url as tasks_url
+No modifiques conftest. Usa datos ficticios y espera condiciones de DOM, no sleeps.
 Responde solamente JSON con el contrato indicado. No hay herramientas de shell.
 """
 

@@ -49,3 +49,29 @@ def test_unchanged_reference_and_new_behavior_test_are_allowed(runner, monkeypat
     _, candidate = staged_reference(tmp_path, runner, monkeypatch)
     (candidate / "tests/test_additional.py").write_text("assert 2 == 2\n", encoding="utf-8")
     runner.verify_reference()
+
+
+def test_test_feedback_keeps_failure_before_coverage_table(runner, monkeypatch, tmp_path):
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(runner, "SCRATCH", tmp_path)
+
+    def command(*args, **kwargs):
+        kwargs["stdout"].write(
+            (
+                "AssertionError: expected new button label\n"
+                + "---------- coverage: platform linux ----------\n"
+                + "coverage row\n" * 800
+                + "Required test coverage of 80% reached. Total coverage: 82.12%\n"
+                + "1 failed, 300 passed\n"
+            ).encode()
+        )
+        return SimpleNamespace(returncode=1)
+
+    monkeypatch.setattr(runner.subprocess, "run", command)
+    report = runner.command("tests", ["fixed-test-command"], {})
+    assert report["exit_code"] == 1
+    assert report["coverage_percent"] == 82.12
+    assert "AssertionError: expected new button label" in report["diagnostics"]
+    assert "coverage row" not in report["diagnostics"]
+    assert "1 failed" in report["diagnostics"]

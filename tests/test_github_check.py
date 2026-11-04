@@ -147,3 +147,15 @@ def test_main_returns_safe_summary(monkeypatch, capsys, mode):
         monkeypatch.setattr(check, "check_repository", lambda: {"status": "ok"})
     assert check.main() == 0
     assert json.loads(capsys.readouterr().out)["status"] == "ok"
+
+
+def test_protection_preflight_uses_actual_branch_settings(monkeypatch):
+    from tests.test_delivery_pipeline import protection
+
+    calls = []
+    monkeypatch.setattr(check, "github_get", lambda path: calls.append(path) or protection())
+    assert check.check_main_protection()["main_protection_verified"] is True
+    assert calls == [f"/repos/{check.REPOSITORY}/branches/main/protection"]
+    monkeypatch.setattr(check, "github_get", lambda _: {})
+    with pytest.raises(check.ScopeError, match="MAIN_PROTECTION_REQUIRED"):
+        check.check_main_protection()

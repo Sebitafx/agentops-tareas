@@ -251,3 +251,22 @@ tokens ni cargas originales de mensajes en este repositorio publico.
   de token remoto con ese permiso, proteccion de main y recorridos reales completos.
 - Guias de activacion, escenarios, arquitectura y defensa agregadas. No se
   acredita merge ni despliegue real con estas pruebas locales.
+
+## Evaluacion ampliada b7b74ff y correcciones
+
+- [Bootstrap CI](https://github.com/Sebitafx/agentops-tareas/actions/runs/41763615116)
+  aprobo. [Evaluacion ampliada](https://github.com/Sebitafx/agentops-tareas/actions/runs/41763614983)
+  detecto fallos: titulo aprobo; boton y buscador agotaron tres intentos; la peticion
+  ambigua genero un cambio y por eso el benchmark fallo. Sin PR ni despliegue.
+- La tabla de cobertura desplazaba la causa del fallo en el feedback. Se conserva
+  ahora el diagnostico util y un campo coverage_percent separado. Nueva regresion
+  verifica que la causa no desaparezca por truncamiento.
+- Se aclaran fixtures UI disponibles. Los oraculos corrigen dos falsos negativos:
+  flecha decorativa en etiqueta y contenedor search con igual nombre que el textbox.
+  Se mantienen las comprobaciones de comportamiento tras guardar y busqueda real.
+- Peticiones vagas conocidas se aclaran antes de IA. No depende de que el modelo
+  decida inventar un requisito. Una peticion concreta conserva el flujo normal.
+- Controles locales independientes rechazaron la version sin cambios y aceptaron
+  correcciones conocidas de titulo y boton. No son generaciones de IA.
+- Participante creo regla clasica de main; API publica confirma protected true.
+  La comprobacion estricta con la App se ejecutara tras la siguiente integracion.

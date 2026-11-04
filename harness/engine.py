@@ -1,5 +1,7 @@
 """Bucle acotado de correccion con proveedor y validacion separados."""
 
+import re
+import unicodedata
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Literal
@@ -40,6 +42,23 @@ Validator = Callable[[Mapping[str, str]], Validation]
 Normalizer = Callable[[Proposal, Mapping[str, str]], Proposal]
 
 
+def missing_requirement(request: str) -> str | None:
+    plain = "".join(
+        char
+        for char in unicodedata.normalize("NFKD", request.casefold())
+        if not unicodedata.combining(char)
+    )
+    plain = " ".join(re.sub(r"[^a-z0-9 ]", " ", plain).split())
+    if re.fullmatch(
+        r"(?:cambia|cambiar|modifica|modificar|mejora|mejorar) "
+        r"(?:(?:el|la|un|una|los|las) )?"
+        r"(?:boton|botones|color|colores|texto|interfaz|sistema|aplicacion)",
+        plain,
+    ) or re.fullmatch(r"agrega(?:r)? (?:algo|una funcion|una funcionalidad)", plain):
+        return "¿Qué elemento quieres cambiar y cuál es el resultado concreto que debe tener?"
+    return None
+
+
 def run_request(
     request: str,
     base: Mapping[str, str],
@@ -49,6 +68,13 @@ def run_request(
 ) -> Outcome:
     if not request.strip() or len(request) > 3000:
         return Outcome("failed", "INVALID_REQUEST", ())
+    if question := missing_requirement(request):
+        return Outcome(
+            "clarify",
+            "NEEDS_INPUT",
+            (),
+            Proposal(action="clarify", summary="Falta un requisito concreto", question=question),
+        )
     # Cada intento parte de la misma base. Un fallo no acumula modificaciones.
     baseline = dict(base)
     history: list[Attempt] = []

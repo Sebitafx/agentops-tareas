@@ -44,6 +44,15 @@ def is_help(text: str) -> bool:
         "que haces",
         "que puedo pedirte",
         "como funciona",
+        "ver estos comandos",
+        "ver comandos",
+        "comandos",
+        "muestrame los comandos",
+        "mostrar comandos",
+        "menu",
+        "/help",
+        "/ayuda",
+        "que puedo hacer",
     }
 
 

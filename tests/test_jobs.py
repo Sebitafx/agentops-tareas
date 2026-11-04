@@ -31,7 +31,20 @@ def seed(database):
 
 
 @pytest.mark.parametrize(
-    "text", ["¿Qué puedes hacer?", "qué eres capaz de hacer?", "AYUDA", "hola", "¿Cómo funciona?"]
+    "text",
+    [
+        "¿Qué puedes hacer?",
+        "qué eres capaz de hacer?",
+        "AYUDA",
+        "hola",
+        "¿Cómo funciona?",
+        "ver estos comandos",
+        "Ver comandos",
+        "Muéstrame los comandos",
+        "menú",
+        "/ayuda",
+        "¿Qué puedo hacer?",
+    ],
 )
 def test_natural_help_does_not_create_request(database, text):
     assert is_help(text)

@@ -3,7 +3,7 @@
 import re
 import time
 
-from bootstrap.github_app import APP_SLUG, REPOSITORY
+from bootstrap.github_app import APP_SLUG, REPOSITORY, GitHubError
 
 
 class IntegrationError(Exception):
@@ -66,24 +66,28 @@ def integrate_pr(
 
     while True:
         current()
-        data = api("GET", root + f"/actions/runs?head_sha={head}&event=push&per_page=30")
+        data = api("GET", root + f"/actions/runs?head_sha={head}&per_page=30")
         runs = [
             run
             for run in data.get("workflow_runs", [])
             if run.get("name") == "Bootstrap CI" and run.get("head_sha") == head
         ]
-        if runs:
-            latest = max(runs, key=lambda item: item.get("id", 0))
-            if latest.get("status") == "completed":
-                if latest.get("conclusion") != "success":
-                    raise IntegrationError("PR_CHECKS_FAILED")
+        if runs and all(run.get("status") == "completed" for run in runs):
+            if any(run.get("conclusion") != "success" for run in runs):
+                raise IntegrationError("PR_CHECKS_FAILED")
+            check_protection(api("GET", root + "/branches/main/protection"))
+            current()
+            try:
+                result = api(
+                    "PUT", root + f"/pulls/{number}/merge", {"sha": head, "merge_method": "merge"}
+                )
                 break
+            except GitHubError as exc:
+                if exc.status != 405 or now() >= deadline:
+                    raise
         if now() >= deadline:
             raise IntegrationError("PR_CHECKS_TIMEOUT")
         sleep(15)
-    check_protection(api("GET", root + "/branches/main/protection"))
-    current()
-    result = api("PUT", root + f"/pulls/{number}/merge", {"sha": head, "merge_method": "merge"})
     sha = result.get("sha", "")
     if result.get("merged") is not True or not re.fullmatch(r"[a-f0-9]{40}", sha):
         raise IntegrationError("MERGE_NOT_CONFIRMED")

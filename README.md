@@ -5,6 +5,9 @@ y revision y correccion de Python tras cada push.
 
 ## Estado real
 
+Ver [progreso verificable y pendientes](docs/progreso.md), con enlaces a codigo y
+ejecuciones. Es un checklist manual; las pruebas activas se ven en GitHub Actions.
+
 Recorrido real WhatsApp -> Meta -> Render -> PostgreSQL verificado: un mensaje del
 participante autorizado quedo guardado en Neon y confirmado en los logs del receptor.
 El callback HTTPS, el campo messages y la suscripcion de la app a la WABA estan configurados.

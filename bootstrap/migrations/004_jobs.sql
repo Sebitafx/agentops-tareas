@@ -1,0 +1,11 @@
+ALTER TABLE agentops_jobs ADD COLUMN request_text TEXT;
+ALTER TABLE agentops_jobs ADD COLUMN dispatch_attempts INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE agentops_jobs ADD COLUMN next_dispatch_at TIMESTAMPTZ NOT NULL DEFAULT now();
+ALTER TABLE agentops_jobs ADD COLUMN worker_run_id TEXT;
+ALTER TABLE agentops_jobs ADD COLUMN lease UUID;
+ALTER TABLE agentops_jobs ADD COLUMN last_error TEXT;
+ALTER TABLE agentops_outbox DROP CONSTRAINT agentops_outbox_message_id_key;
+ALTER TABLE agentops_outbox ADD COLUMN event_key TEXT;
+UPDATE agentops_outbox SET event_key = 'receipt:' || message_id;
+ALTER TABLE agentops_outbox ALTER COLUMN event_key SET NOT NULL;
+CREATE UNIQUE INDEX agentops_outbox_event ON agentops_outbox(event_key);

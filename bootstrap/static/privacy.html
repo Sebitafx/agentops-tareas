@@ -23,9 +23,10 @@
     <a href="mailto:oriundotafur@gmail.com">oriundotafur@gmail.com</a>.</p>
   <h2>Alcance de esta versión</h2>
   <p>La versión actual recibe mensajes de texto de participantes autorizados por WhatsApp
-    para probar una integración de desarrollo de software. Los agentes de corrección,
-    y la revisión con IA todavía no están habilitados. Puede responder automáticamente
-    con ayuda, confirmaciones de recepción y el estado de solicitudes propias.
+    para probar una integración de desarrollo de software. Puede responder automáticamente
+    con ayuda, confirmaciones y estados, y enviar solicitudes autorizadas al agente de
+    desarrollo para preparar cambios y PR. La integración y el despliegue automáticos
+    todavía están pendientes.
     Utiliza datos ficticios para las pruebas; evita enviar contraseñas, claves, documentos
     de identidad, datos financieros, médicos o información privada de otras personas.</p>
   <h2>Datos que se guardan</h2>
@@ -54,8 +55,13 @@
     los registros en PostgreSQL. Estos proveedores procesan información conforme a sus
     propias condiciones y políticas. El servicio y la base están configurados en la región
     de Oregon, Estados Unidos. GitHub aloja el código y ejecuta pruebas con datos ficticios.</p>
-  <p>Esta versión no envía los mensajes recibidos a un proveedor de IA. Antes de habilitar
-    ese tratamiento se actualizará esta política y se informará a los participantes.</p>
+  <p>Las peticiones de desarrollo y sus aclaraciones se procesan en GitHub Actions.
+    El agente transmite ese texto y fragmentos de código a Groq para proponer cambios.
+    No transmite a Groq el número de teléfono ni las credenciales. Las consultas de
+    ayuda y estado se resuelven sin IA. Utiliza exclusivamente peticiones con datos ficticios.</p>
+  <p>El código propuesto y los PR pertenecen a un repositorio público. El cuerpo del PR
+    no incluye el texto original de WhatsApp. El administrador puede consultar las
+    solicitudes y sus estados; el acceso entre el receptor y el workflow se autentica.</p>
   <h2>Conservación y eliminación</h2>
   <p>Esta versión todavía no tiene una caducidad automática de registros. Los datos
     permanecen almacenados hasta que la administración los elimina. Puedes dejar de

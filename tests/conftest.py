@@ -17,6 +17,8 @@ def isolated_environment(monkeypatch: pytest.MonkeyPatch) -> None:
         "WHATSAPP_TOKEN",
         "META_GRAPH_VERSION",
         "SERVICE_ROLE",
+        "AGENT_APP_ID",
+        "AGENT_APP_PRIVATE_KEY",
     ):
         monkeypatch.delenv(key, raising=False)
 

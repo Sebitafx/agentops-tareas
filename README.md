@@ -19,6 +19,8 @@ Gestor CRUD y filtros implementado, con API, UI y E2E. Desplegado y comprobado e
 https://agentops-tasks.onrender.com/. Configuracion en [gestor de tareas](docs/tareas.md).
 Contrato, politica de propuestas, bucle y validacion aislada Docker implementados.
 Falta conectar PR y solicitudes reales; ver [arnes](docs/arnes.md).
+El [puente de solicitudes a PR](docs/solicitudes-reales.md) esta implementado y
+probado localmente; su despliegue y recorrido real siguen pendientes de confirmar.
 Respuestas WhatsApp de ayuda, registro y estado implementadas; envio real de hola
 y respuesta de ayuda confirmado por el participante. Ver [respuestas](docs/respuestas-whatsapp.md).
 Pendiente: agentes, PR automaticos y despliegue

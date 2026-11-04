@@ -19,10 +19,11 @@ mensaje del participante. El publicador aun no ha creado un PR real.
 
 ## Siguiente implementacion: conectar WhatsApp con el agente
 
-- [ ] Despachar a Actions las solicitudes guardadas, con reintentos y deduplicacion.
-- [ ] Autenticar la consulta de solicitudes y sus actualizaciones de estado.
+- [x] Implementar y probar despacho a Actions, consulta privada y callbacks con lease.
+- [ ] Verificar el despacho y callbacks con una solicitud real en la nube.
 - [ ] Ejecutar una solicitud real con IA, normalizacion y validacion aislada.
-- [ ] Devolver preguntas de aclaracion por WhatsApp y continuar con la respuesta.
+- [x] Implementar y probar reanudacion de aclaraciones del mismo remitente.
+- [ ] Verificar la aclaracion real por WhatsApp.
 - [ ] Crear el primer PR real a partir del candidato validado.
 - [ ] Proteger main, exigir controles y revalidar base y contenido antes de integrar.
 - [ ] Desplegar el commit integrado, confirmar salud/version y gestionar fallos.
@@ -47,4 +48,5 @@ mensaje del participante. El publicador aun no ha creado un PR real.
 
 Actions muestra queued/in progress cuando existe una ejecucion activa y completed
 cuando termino. Las respuestas del chat o este checklist no crean un trabajo por
-si solos. El receptor publicado aun informa agents pending: no procesa correcciones.
+si solos. El puente esta implementado y requiere despliegue y demostracion real;
+ver [solicitudes reales](solicitudes-reales.md). No confundir implementacion con evidencia.

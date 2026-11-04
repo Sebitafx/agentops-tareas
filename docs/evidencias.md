@@ -225,3 +225,13 @@ tokens ni cargas originales de mensajes en este repositorio publico.
 - Los tests de publicacion simulan GitHub; no se ha creado un PR real con ese modulo.
 - Pendientes: despachar solicitudes, callbacks, PR real, proteccion de main,
   integracion con revalidacion y despliegue comprobado.
+
+## Puente WhatsApp a Actions implementado
+
+- Migracion 004, despacho serializado, API privada con lease y callback idempotente.
+- Aclaraciones retoman la solicitud del mismo remitente e invalidan el lease anterior.
+- Preguntas naturales de capacidades reciben ayuda y no crean solicitudes nuevas.
+- Controlador y workflow preparados para generar, validar y publicar un PR real.
+- 282 pruebas locales aisladas aprobadas, cobertura 84.28%. Incluyen PostgreSQL y E2E.
+- Pendiente verificar esta version desplegada y un PR realmente originado en WhatsApp.
+- Integracion, despliegue autonomo y revisor por push siguen pendientes.

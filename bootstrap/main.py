@@ -15,6 +15,7 @@ from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
 
 from bootstrap.database import SCHEMA_VERSION, Database, SchemaError
+from bootstrap.jobs import router as jobs_router
 from bootstrap.whatsapp import MAX_BODY_BYTES, Event, ReceiverSettings, extract, valid_signature
 
 # Hereda los handlers de Uvicorn: INFO debe ser visible en Render, sin access logs.
@@ -51,6 +52,17 @@ async def lifespan(application: FastAPI):
             logger.error("Inicializacion de PostgreSQL fallida (%s)", type(exc).__name__)
     stop = asyncio.Event()
     worker = None
+    dispatcher = None
+    application.state.agent_dispatcher = None
+    if (
+        application.state.database is not None
+        and os.getenv("SERVICE_ROLE", "receiver") == "receiver"
+        and os.getenv("AGENT_APP_PRIVATE_KEY")
+    ):
+        from bootstrap.jobs import dispatch_worker
+
+        dispatcher = asyncio.create_task(dispatch_worker(application.state.database, stop))
+        application.state.agent_dispatcher = dispatcher
     if (
         application.state.database is not None
         and os.getenv("SERVICE_ROLE", "receiver") == "receiver"
@@ -64,16 +76,20 @@ async def lifespan(application: FastAPI):
         yield
     finally:
         stop.set()
-        if worker:
+        for task in (worker, dispatcher):
+            if task is None:
+                continue
             try:
-                await asyncio.wait_for(worker, timeout=20)
+                await asyncio.wait_for(task, timeout=60)
             except (TimeoutError, asyncio.CancelledError):
-                worker.cancel()
+                task.cancel()
         application.state.reply_worker = None
         application.state.database = None
 
 
 app = FastAPI(title="AgentOps Tareas — receptor WhatsApp", lifespan=lifespan)
+
+app.include_router(jobs_router)
 
 
 @app.get("/privacy", response_class=FileResponse, include_in_schema=False)

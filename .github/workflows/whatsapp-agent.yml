@@ -1,0 +1,46 @@
+name: WhatsApp agent
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: UUID de una solicitud guardada
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: agent-integration-and-deployment
+  cancel-in-progress: false
+jobs:
+  request:
+    if: github.repository == 'Sebitafx/agentops-tareas' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+      - run: python -m pip install -r requirements-dev.txt
+      - name: Build trusted validator
+        run: |
+          BASE_SHA=$(git rev-parse HEAD)
+          docker build --file Dockerfile.validation --tag agentops-validator:$BASE_SHA .
+          echo "VALIDATOR_IMAGE=agentops-validator:$BASE_SHA" >> "$GITHUB_ENV"
+      - name: Execute one durable request
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          AGENT_APP_ID: ${{ secrets.AGENT_APP_ID }}
+          AGENT_APP_PRIVATE_KEY: ${{ secrets.AGENT_APP_PRIVATE_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: python -m harness.request_worker --job-id "$JOB_ID" --image "$VALIDATOR_IMAGE"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: request-validation
+          path: artifacts/latest-validation.json
+          retention-days: 3

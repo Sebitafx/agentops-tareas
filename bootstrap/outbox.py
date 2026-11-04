@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import os
+import re
+import unicodedata
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import TYPE_CHECKING
@@ -24,10 +27,46 @@ HELP = (
 )
 
 
+def is_help(text: str) -> bool:
+    plain = "".join(
+        c for c in unicodedata.normalize("NFKD", text.casefold()) if not unicodedata.combining(c)
+    )
+    plain = " ".join(re.sub(r"[^a-z0-9 /]", " ", plain).split())
+    return plain in {
+        "hola",
+        "hola agentops",
+        "ayuda",
+        "help",
+        "inicio",
+        "/start",
+        "que puedes hacer",
+        "que eres capaz de hacer",
+        "que haces",
+        "que puedo pedirte",
+        "como funciona",
+    }
+
+
+def automation_configured() -> bool:
+    return bool(os.getenv("AGENT_APP_ID") and os.getenv("AGENT_APP_PRIVATE_KEY"))
+
+
+def help_text() -> str:
+    if not automation_configured():
+        return HELP
+    return (
+        "¡Hola! Soy AgentOps Tareas 🤖. Puedo preparar cambios de la aplicación, "
+        "pedir aclaraciones, ejecutar pruebas y abrir un PR cuando el cambio apruebe.\n\n"
+        "Escribe una petición concreta, usa ayuda o consulta estado <id>.\n"
+        "La integración y el despliegue automáticos todavía están pendientes.\n"
+        "No envíes secretos ni datos personales. Aplicación: " + APP_URL
+    )
+
+
 def queue_receipt(conn: psycopg.Connection, message: IncomingMessage) -> None:
     normalized = message.body.strip().casefold()
-    if normalized in {"ayuda", "help", "hola", "hola agentops", "inicio", "/start"}:
-        reply = HELP
+    if is_help(message.body):
+        reply = help_text()
     elif normalized == "estado":
         reply = "Para consultar una solicitud escribe: estado <id>. Usa el id que te envié al registrarla."
     elif normalized.startswith("estado "):
@@ -46,28 +85,65 @@ def queue_receipt(conn: psycopg.Connection, message: IncomingMessage) -> None:
             if row:
                 reply = f"Solicitud {job_id}\nEstado: {row[0]}."
                 if row[0] == "received":
-                    reply += (
-                        "\nRecibida y guardada; el agente de corrección todavía no está conectado."
+                    reply += "\nRecibida y guardada. " + (
+                        "Pendiente de iniciar el agente."
+                        if automation_configured()
+                        else "El agente de corrección todavía no está conectado."
                     )
                 elif row[1]:
                     reply += "\n" + row[1][:2400]
             else:
                 reply = "No encontré esa solicitud entre las asociadas a tu número."
     else:
-        job_id = uuid4()
-        conn.execute(
-            "INSERT INTO agentops_jobs (id, message_id) VALUES (%s, %s)",
-            (job_id, message.message_id),
-        )
+        waiting = conn.execute(
+            """SELECT j.id, COALESCE(j.request_text,i.body),j.summary
+            FROM agentops_jobs j JOIN agentops_inbox i ON i.message_id=j.message_id
+            WHERE i.sender=%s AND j.state='needs_input' ORDER BY j.updated_at DESC
+            LIMIT 1 FOR UPDATE OF j""",
+            (message.sender,),
+        ).fetchone()
+        if waiting:
+            job_id = waiting[0]
+            conn.execute(
+                """UPDATE agentops_jobs SET request_text=%s, state='received',
+                dispatch_attempts=0,worker_run_id=NULL,lease=NULL,next_dispatch_at=now(),
+                updated_at=now() WHERE id=%s""",
+                (
+                    waiting[1]
+                    + "\nPregunta del agente: "
+                    + waiting[2]
+                    + "\nAclaracion: "
+                    + message.body,
+                    job_id,
+                ),
+            )
+        else:
+            job_id = uuid4()
+            conn.execute(
+                "INSERT INTO agentops_jobs (id, message_id) VALUES (%s, %s)",
+                (job_id, message.message_id),
+            )
         reply = (
             f"Recibí tu petición ✅\nId: {job_id}\nEstado: received (recibida y guardada).\n\n"
             "El agente de corrección todavía está en conexión. No he cambiado código ni desplegado.\n"
             f"Puedes consultar: estado {job_id}\nAplicación: {APP_URL}"
         )
+        if automation_configured():
+            reply = (
+                f"Petición recibida ✅\nId: {job_id}\nIntentaré iniciar el agente en GitHub. "
+                "Si falta información, te preguntaré por aquí.\n"
+                f"Consulta: estado {job_id}\nAún no se confirma ningún cambio ni despliegue."
+            )
     conn.execute(
-        """INSERT INTO agentops_outbox (id, message_id, body, expires_at)
-           VALUES (%s, %s, %s, %s)""",
-        (uuid4(), message.message_id, reply, message.sent_at + timedelta(hours=23)),
+        """INSERT INTO agentops_outbox (id, message_id, body, expires_at, event_key)
+           VALUES (%s, %s, %s, %s, %s)""",
+        (
+            uuid4(),
+            message.message_id,
+            reply,
+            message.sent_at + timedelta(hours=23),
+            "receipt:" + message.message_id,
+        ),
     )
 
 

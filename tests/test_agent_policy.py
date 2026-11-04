@@ -28,6 +28,31 @@ def valid_change():
     return change(sha=digest(BASE["taskapp/sample.py"]))
 
 
+@pytest.mark.parametrize("broken", ["policy", "json"])
+def test_intermediate_bad_proposal_preserves_last_validation_cause(broken):
+    contexts = []
+    validated = []
+    cause = "TypeError: Page.goto: Object of type function is not JSON serializable"
+
+    def propose(request, base, feedback):
+        contexts.append(feedback)
+        if len(contexts) == 2:
+            if broken == "json":
+                raise ValueError("bad schema")
+            return change("tests/test_original.py", "pass\n")
+        return valid_change()
+
+    def validate(candidate):
+        validated.append(candidate)
+        return Validation(len(validated) == 2, cause)
+
+    result = run_request("Cambio ficticio", BASE, propose, validate)
+    assert result.status == "validated" and len(validated) == 2
+    assert cause in contexts[1] and cause in contexts[2]
+    assert ("PROTECTED_PATH" if broken == "policy" else "INVALID_PROPOSAL") in contexts[2]
+    assert result.candidate["tests/test_original.py"] == BASE["tests/test_original.py"]
+
+
 @pytest.mark.parametrize(
     "path",
     [

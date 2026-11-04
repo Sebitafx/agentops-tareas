@@ -26,6 +26,21 @@ nube son evidencias diferentes.
 
 ## Correccion de contexto para encabezados
 
+### Fallo real posterior y reparacion del diagnostico
+
+- Workflow 41790073827 para solicitud 14cac493: 341 pruebas pasaron y fallo solo
+  una prueba nueva de IA, test_heading.py. Page.goto recibio una funcion porque
+  el test omitio el parametro de fixture tasks_url. No se creo PR ni despliegue.
+- El segundo intento intento una ruta protegida. El controlador sustituyo el
+  diagnostico anterior por PROTECTED_PATH y el tercer intento perdio esa causa.
+- Se conserva ahora el ultimo fallo de validacion tras propuestas prohibidas o
+  JSON invalido, sin acumular parches ni ampliar los tres intentos. Dos regresiones
+  reproducen ambas secuencias y conservan las pruebas de referencia intactas.
+- El prompt explica la inyeccion de tasks_url como parametro y muestra un ejemplo
+  completo. Para etiquetas no exige inventar una prueba adicional al E2E existente.
+- Pendiente validar la nueva version con IA real. Las regresiones usan proveedor
+  simulado; no acreditan por si solas un cambio ni despliegue reales.
+
 - [x] Detectado: la solicitud de encabezado sin palabra texto/boton elegia Python,
       dejando al modelo sin HTML/JS ni sus hashes. El workflow 41788460438 fallo
       sin artefacto de validacion; no conserva el motivo interno de cada intento.

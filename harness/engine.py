@@ -79,6 +79,7 @@ def run_request(
     baseline = dict(base)
     history: list[Attempt] = []
     feedback = ""
+    last_validation_feedback = ""
     for number in range(1, MAX_ATTEMPTS + 1):
         try:
             proposal = propose(request, dict(baseline), feedback)
@@ -86,8 +87,8 @@ def run_request(
             history.append(Attempt(number, exc.reason))
             return Outcome("failed", exc.reason, tuple(history))
         except (ValidationError, ValueError):
-            feedback = "INVALID_PROPOSAL"
-            history.append(Attempt(number, feedback))
+            feedback = ("INVALID_PROPOSAL\n" + last_validation_feedback)[:4000]
+            history.append(Attempt(number, "INVALID_PROPOSAL"))
             continue
         if proposal.action != "change":
             status = "clarify" if proposal.action == "clarify" else "refused"
@@ -106,6 +107,13 @@ def run_request(
         except PolicyError as exc:
             feedback = str(exc)
             history.append(Attempt(number, feedback))
+            if last_validation_feedback:
+                feedback = (
+                    feedback
+                    + "\nNo cambies pruebas de referencia. Corrige la aplicación o tu prueba nueva."
+                    + "\nÚltimo fallo de validación:\n"
+                    + last_validation_feedback
+                )[:4000]
             continue
         except CheckError as exc:
             history.append(Attempt(number, exc.reason))
@@ -119,6 +127,7 @@ def run_request(
         if validation.passed:
             history.append(Attempt(number, "VALIDATION_PASSED"))
             return Outcome("validated", "VALIDATION_PASSED", tuple(history), proposal, candidate)
-        feedback = validation.feedback[:4000]
+        last_validation_feedback = validation.feedback[:4000]
+        feedback = last_validation_feedback
         history.append(Attempt(number, "VALIDATION_FAILED"))
     return Outcome("failed", "ATTEMPTS_EXHAUSTED", tuple(history))

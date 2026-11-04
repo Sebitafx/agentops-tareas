@@ -191,7 +191,7 @@ class DockerValidator:
                 )
                 return Validation(
                     passed,
-                    "VALIDATION_PASSED" if passed else feedback[-4000:] or "VALIDATION_FAILED",
+                    "VALIDATION_PASSED" if passed else feedback[:4000] or "VALIDATION_FAILED",
                 )
             finally:
                 subprocess.run(

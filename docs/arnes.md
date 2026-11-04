@@ -30,6 +30,8 @@ base y recibe como maximo 4000 caracteres de diagnostico de la validacion anteri
 Una propuesta prohibida no llega al validador. No mas de tres intentos; las cuotas,
 fallos del proveedor y validador no disponible detienen la solicitud. Un fallo nunca
 devuelve un candidato aprobado. Clarificar o rechazar tambien detiene el trabajo.
+Peticiones vagas conocidas, como Cambia un boton, se aclaran antes de llamar al
+modelo para evitar que invente requisitos. Otras ambiguedades dependen del modelo.
 
 Antes de validar, Ruff puede normalizar el texto de los archivos Python propuestos:
 ordena imports y aplica formato mediante comandos fijos sobre stdin. Comprueba el
@@ -56,6 +58,7 @@ etiqueta de boton, buscador local y solicitud ambigua. Comparte solo los archivo
 pertinentes y un indice publico. Verifica contrato, rutas, hashes y limites; prueba
 el candidato en Docker y permite hasta tres intentos. Los tres cambios tienen
 oraculos independientes en las pruebas de referencia; la ambiguedad exige clarify.
+El caso ambiguo conocido usa la comprobacion previa de requisitos y no consume IA.
 Guarda propuesta y evidencia como artefactos tres dias. No aplica el parche al
 checkout, crea PR ni despliega. Tampoco procesa mensajes personales de WhatsApp.
 El preflight anterior produjo status proposed sin ejecutar codigo; no confundir

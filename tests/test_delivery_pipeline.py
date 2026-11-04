@@ -38,6 +38,13 @@ def test_main_must_be_strictly_protected(kind):
         check_protection(value)
 
 
+def test_agent_reports_human_review_requirement_without_bypassing_it():
+    value = protection()
+    value["required_pull_request_reviews"] = {"required_approving_review_count": 1}
+    with pytest.raises(IntegrationError, match="HUMAN_REVIEW_REQUIRED_BY_MAIN"):
+        check_protection(value)
+
+
 def api_fixture(problem=None):
     calls = []
 

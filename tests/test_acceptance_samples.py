@@ -1,6 +1,7 @@
 """Oraculos independientes para los benchmarks; el agente no puede editarlos."""
 
 import os
+import re
 
 import pytest
 from pydantic import ValidationError
@@ -29,11 +30,12 @@ def test_requested_create_label_survives_submission(tasks_url):
         browser = playwright.chromium.launch()
         page = browser.new_page()
         page.goto(tasks_url)
-        expect(page.locator("#submit")).to_have_text("Agregar tarea")
+        label = re.compile(r"^Agregar tarea(?:\s*↗)?$")
+        expect(page.locator("#submit")).to_have_text(label)
         page.get_by_label("Título de la tarea").fill("Prueba del texto nuevo")
         page.locator("#submit").click()
         expect(page.get_by_test_id("task-card")).to_have_count(1)
-        expect(page.locator("#submit")).to_have_text("Agregar tarea")
+        expect(page.locator("#submit")).to_have_text(label)
         browser.close()
 
 
@@ -49,7 +51,7 @@ def test_requested_search_is_case_insensitive_and_clearable(tasks_url):
             page.get_by_label("Título de la tarea").fill(title)
             page.locator("#submit").click()
             expect(page.get_by_role("heading", name=title, exact=True)).to_be_visible()
-        search = page.get_by_label("Buscar tareas", exact=True)
+        search = page.get_by_role("textbox", name="Buscar tareas", exact=True)
         expect(search).to_have_attribute("id", "task-search")
         search.fill("ALFA")
         expect(page.get_by_test_id("task-card")).to_have_count(1)

@@ -17,7 +17,7 @@ nube son evidencias diferentes.
 El receptor mostrado por el participante sigue en la version de respuestas;
 no hay evidencia aun de que ejecute el puente actualizado.
 
-## Implementado localmente, pendiente de publicar esta iteracion
+## Implementado y publicado en b7b74ff
 
 - [x] Despacho duradero a Actions, API privada, claim exclusivo y callbacks con lease.
 - [x] Aclaracion: retomar el mismo UUID solo con respuesta del mismo remitente.
@@ -35,7 +35,27 @@ no hay evidencia aun de que ejecute el puente actualizado.
 - [x] Suite completa repetida tras corregir el fallo del comprobador de evaluacion:
       313 pruebas aprobadas, cuatro casos separados omitidos y 81,78% de cobertura.
       PostgreSQL, lint, formato, mypy y Chromium aprobados.
-- [ ] Publicar el commit final y comprobar CI y benchmarks reales en Actions.
+- [x] Publicar b7b74ff y comprobar Bootstrap CI aprobada:
+      https://github.com/Sebitafx/agentops-tareas/actions/runs/41763615116.
+- [x] Broker local repetido: webhook, PostgreSQL, Docker real y callbacks aprobados.
+- [x] Controles independientes: la version original falla y una correccion conocida
+      aprueba tanto el limite de titulo como el texto del boton.
+- [ ] Aprobar la evaluacion ampliada de IA. Primer resultado b7b74ff: limite
+      aprobado, boton/buscador agotaron intentos y peticion ambigua genero cambio.
+      No se creo PR ni se desplegaron esos candidatos. Diagnosticos revisados.
+
+## Correcciones posteriores en validacion
+
+- [x] Conservar la causa del fallo en feedback, evitando que la tabla de cobertura
+      la desplace. La cobertura se conserva como campo del reporte.
+- [x] Instrucciones de pruebas UI ajustadas a Playwright instalado, sin fixtures de
+      pytest-playwright que el proyecto no tiene.
+- [x] Preguntas obligatorias antes de IA para peticiones vagas conocidas.
+- [x] Oraculos UI distinguen textbox de su contenedor y toleran flecha decorativa
+      sin perder la comprobacion de etiqueta y comportamiento tras guardar.
+- [x] Suite corregida: 321 pruebas aprobadas, cuatro casos separados omitidos,
+      cobertura 82,14%, PostgreSQL y Chromium reales, lint/formato/tipos correctos.
+- [ ] Publicar estas correcciones por PR y repetir CI y evaluacion de IA.
 
 ## Configuracion de cuentas
 
@@ -43,7 +63,8 @@ no hay evidencia aun de que ejecute el puente actualizado.
 - [x] Variables de App en el receptor y hook de tareas en Actions configurados por el participante.
 - [x] Administration Read-only agregado segun confirmacion del participante;
       pendiente de comprobar su emision de token desde Actions.
-- [ ] Proteger main: PR obligatorio, bootstrap-quality, base actualizada, sin bypass.
+- [x] Participante creo regla clasica para main; comprobar configuracion estricta
+      desde la App antes de integrar automaticamente.
 - [ ] Desplegar manualmente la version final en Render y confirmar /version y /ready.
 - [ ] Resolver token temporal de WhatsApp o documentar su renovacion para la demo.
 

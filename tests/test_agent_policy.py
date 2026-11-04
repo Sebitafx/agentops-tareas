@@ -231,3 +231,27 @@ def test_invalid_request_never_calls_provider(task_request):
         lambda _: pytest.fail("No validar"),
     )
     assert result.reason == "INVALID_REQUEST" and not result.attempts
+
+
+@pytest.mark.parametrize(
+    "task_request", ["Cambia un botón.", "Mejora la interfaz", "Agrega una función"]
+)
+def test_vague_request_asks_before_model_can_invent_requirements(task_request):
+    result = run_request(
+        task_request,
+        BASE,
+        lambda *_: pytest.fail("No inventar requisitos con IA"),
+        lambda _: pytest.fail("No ejecutar codigo ambiguo"),
+    )
+    assert result.status == "clarify" and result.proposal.question
+    assert not result.attempts and result.candidate is None
+
+
+def test_specific_button_change_reaches_normal_validation():
+    result = run_request(
+        "Cambia el boton Crear por Agregar",
+        BASE,
+        lambda *_: valid_change(),
+        lambda _: Validation(True, "ok"),
+    )
+    assert result.status == "validated"

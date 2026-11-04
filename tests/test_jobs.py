@@ -94,7 +94,11 @@ def test_clarification_resumes_original_job_and_invalidates_old_lease(database):
     database.save(
         [
             IncomingMessage(
-                "wamid.answer", "12345", "51900000001", "El boton del formulario", datetime.now(UTC)
+                "wamid.answer",
+                "12345",
+                "51900000001",
+                f"responder {job_id} El boton del formulario",
+                datetime.now(UTC),
             )
         ],
         [],
@@ -115,10 +119,38 @@ def test_another_sender_does_not_answer_private_question(database):
         database, job_id, Progress(lease=first["lease"], state="needs_input", summary="¿Que boton?")
     )
     database.save(
-        [IncomingMessage("wamid.other", "12345", "51900000002", "otro", datetime.now(UTC))], []
+        [
+            IncomingMessage(
+                "wamid.other", "12345", "51900000002", "agregar otro filtro", datetime.now(UTC)
+            )
+        ],
+        [],
     )
     with database.connect() as conn:
         assert conn.execute("SELECT count(*) FROM agentops_jobs").fetchone()[0] == 2
+
+
+def test_unprefixed_text_and_wrong_sender_cannot_resume_question(database):
+    job_id = seed(database)
+    first = claim_job(database, job_id, "1")
+    update_job(
+        database, job_id, Progress(lease=first["lease"], state="needs_input", summary="¿Qué texto?")
+    )
+    for number, text, sender in [
+        (1, "El titulo nuevo", "51900000001"),
+        (2, f"responder {job_id} otro titulo", "51900000002"),
+        (3, "responder incorrecto texto", "51900000001"),
+        (4, "responder", "51900000001"),
+    ]:
+        database.save(
+            [IncomingMessage(f"wamid.invalid{number}", "12345", sender, text, datetime.now(UTC))],
+            [],
+        )
+    with database.connect() as conn:
+        assert conn.execute(
+            "SELECT state,lease FROM agentops_jobs WHERE id=%s", (job_id,)
+        ).fetchone() == ("needs_input", UUID(first["lease"]))
+        assert conn.execute("SELECT count(*) FROM agentops_jobs").fetchone()[0] == 1
 
 
 def test_control_api_rejects_bad_auth_and_missing_jobs(monkeypatch):

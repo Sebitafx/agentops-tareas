@@ -23,9 +23,11 @@ Un segundo workflow recibe 409 y termina sin trabajo. progress requiere el mismo
 lease, valida estados y guarda estado y respuesta en una transaccion. Un lease de
 otra ejecucion se rechaza. Callbacks repetidos no duplican notificaciones.
 
-Si el agente pregunta, el estado pasa a needs_input. Una respuesta del mismo numero
-retoma la pregunta mas reciente, conserva el id e invalida el lease anterior. Las
-consultas de ayuda/estado no responden la pregunta. El texto acumulado sigue sujeto
+Si el agente pregunta, el estado pasa a needs_input. El comando responder UUID detalle
+del mismo numero retoma esa pregunta, conserva el id e invalida el lease anterior.
+No se reanuda con texto libre ni se interpreta una peticion nueva como respuesta.
+Solo los comandos de cambio admitidos crean trabajos; los mensajes no reconocidos
+reciben reglas. Ver [comandos](comandos-whatsapp.md). El texto acumulado sigue sujeto
 al limite del arnes; no se recorta silenciosamente para intentar aprobarlo.
 
 Un trabajo running sin actualizaciones durante 45 minutos, o un despacho sin

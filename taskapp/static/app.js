@@ -23,7 +23,8 @@ function resetForm() {
   editing = null;
   $("#task-form").reset();
   $("#form-heading").textContent = "Una cosa a la vez";
-  $("#submit").textContent = "Agregar tarea ↗";
+  // Updated button text to match new requirement
+  $("#submit").textContent = "Crear tarea ↗";
   $("#cancel").hidden = true;
 }
 

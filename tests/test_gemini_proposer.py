@@ -1,14 +1,35 @@
+import io
 import json
 
 import pytest
 
 from harness import gemini_proposer as gemini
-from harness import review_push
+from harness import provider_http, review_push
 from harness.engine import Validation, run_request
 from harness.proposals import Proposal, digest
 from harness.provider_http import CheckError
 
 BASE = {"taskapp/sample.py": "value = 1\n"}
+
+
+def test_provider_timeouts_remain_bounded_and_network_is_not_retried(monkeypatch):
+    calls = []
+
+    class Opener:
+        def open(self, request, timeout):
+            calls.append(timeout)
+            if len(calls) == 3:
+                raise TimeoutError("private")
+            return io.BytesIO(b"{}")
+
+    monkeypatch.setenv("GROQ_MIN_INTERVAL_SECONDS", "0")
+    monkeypatch.setattr(provider_http.urllib.request, "build_opener", lambda *_: Opener())
+    google = "https://generativelanguage.googleapis.com/v1beta/models/demo"
+    provider_http.request_json(google, {})
+    provider_http.request_json("https://api.groq.com/openai/v1/models", {})
+    with pytest.raises(CheckError, match="NETWORK_ERROR"):
+        provider_http.request_json(google, {})
+    assert calls == [90, 30, 90]
 
 
 def proposal():

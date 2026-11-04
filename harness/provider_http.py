@@ -102,7 +102,10 @@ def retry_delay(value: str) -> float | None:
 def send_json(request: urllib.request.Request) -> dict:
     try:
         opener = urllib.request.build_opener(NoRedirect())
-        with opener.open(request, timeout=30) as response:
+        # Gemini puede tardar mas en generar con razonamiento. Sigue siendo una
+        # unica llamada acotada: un timeout de red no se reintenta automaticamente.
+        timeout = 90 if request.host == "generativelanguage.googleapis.com" else 30
+        with opener.open(request, timeout=timeout) as response:
             body = response.read(MAX_RESPONSE_BYTES + 1)
         if len(body) > MAX_RESPONSE_BYTES:
             raise CheckError("RESPONSE_TOO_LARGE")

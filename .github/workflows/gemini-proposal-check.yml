@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/gemini-proposal-check.yml'
       - 'harness/gemini_proposer.py'
+      - 'harness/provider_http.py'
 permissions:
   contents: read
 concurrency:

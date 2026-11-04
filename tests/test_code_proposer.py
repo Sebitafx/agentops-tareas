@@ -72,6 +72,47 @@ def test_context_and_credentials_checked_before_network(monkeypatch):
             GroqProposer(key, model)
     with pytest.raises(CheckError, match="CONTEXT_TOO_LARGE"):
         GroqProposer("test-only")("Demo", {"taskapp/a.py": "x" * 16000}, "")
+    # El codigo no se recorta: aun con diagnostico presente, exceder sigue fallando.
+    with pytest.raises(CheckError, match="CONTEXT_TOO_LARGE"):
+        GroqProposer("test-only")("Demo", {"taskapp/a.py": "x" * 16000}, "Fallo real")
+
+
+def test_oversized_diagnostic_trimmed_but_request_and_code_complete(monkeypatch):
+    calls = []
+
+    def transport(_url, _headers, payload):
+        calls.append(payload)
+        return generated(json.dumps({"action": "clarify", "summary": "Demo", "question": "Demo?"}))
+
+    monkeypatch.setattr(code_proposer, "request_json", transport)
+    source = "a = 1\n"
+    feedback = "CAUSA " + "x" * 20000 + " RESUMEN"
+    GroqProposer("test-only")("Requisito completo", {"taskapp/a.py": source}, feedback)
+    context = json.loads(calls[0]["messages"][1]["content"])
+    sent = context["validation_feedback"]
+    assert len(calls) == 1
+    assert len(sent) < len(feedback) and "[diagnostico acotado]" in sent
+    assert sent.startswith("CAUSA") and sent.endswith("RESUMEN")
+    assert context["files"]["taskapp/a.py"]["content"] == source
+    assert context["request"] == "Requisito completo"
+    assert (
+        len(code_proposer.SYSTEM) + len(calls[0]["messages"][1]["content"])
+        <= code_proposer.MAX_CONTEXT_CHARS
+    )
+
+
+def test_diagnostic_is_not_trimmed_when_context_fits(monkeypatch):
+    captured = {}
+
+    def transport(_url, _headers, payload):
+        captured.update(payload)
+        return generated(json.dumps({"action": "clarify", "summary": "Demo", "question": "Demo?"}))
+
+    monkeypatch.setattr(code_proposer, "request_json", transport)
+    feedback = "Causa corta " * 50
+    GroqProposer("test-only")("Demo", {"taskapp/a.py": "a = 1\n"}, feedback)
+    sent = json.loads(captured["messages"][1]["content"])["validation_feedback"]
+    assert sent == feedback and "[diagnostico acotado]" not in sent
 
 
 def test_provider_quota_has_no_automatic_retry(monkeypatch):

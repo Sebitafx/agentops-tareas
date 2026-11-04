@@ -57,6 +57,15 @@ no hay evidencia aun de que ejecute el puente actualizado.
       cobertura 82,14%, PostgreSQL y Chromium reales, lint/formato/tipos correctos.
 - [ ] Publicar estas correcciones por PR y repetir CI y evaluacion de IA.
 
+## Presupuesto de contexto del proposer
+
+- [x] Diagnostico acotado cuando codigo mas feedback superan 16000 caracteres:
+      requisito y codigo completos, solo el feedback se recorta conservando
+      causa y resumen con la marca ya usada por el validador aislado. Es lo que
+      detuvo la reparacion del buscador. Pruebas del proposer 16 aprobadas,
+      controles ruff/formato/mypy de taskapp aprobados y suite local en verde;
+      pendiente repetir la evaluacion real de IA.
+
 ## Configuracion de cuentas
 
 - [x] GitHub App instalada solo en este repositorio; secretos de Actions configurados.

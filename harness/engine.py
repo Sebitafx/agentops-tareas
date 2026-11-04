@@ -37,6 +37,7 @@ class Outcome:
 # La validacion es obligatoria. Este modulo no contiene una opcion para omitirla.
 Proposer = Callable[[str, Mapping[str, str], str], Proposal]
 Validator = Callable[[Mapping[str, str]], Validation]
+Normalizer = Callable[[Proposal, Mapping[str, str]], Proposal]
 
 
 def run_request(
@@ -44,6 +45,7 @@ def run_request(
     base: Mapping[str, str],
     propose: Proposer,
     validate: Validator,
+    normalize: Normalizer | None = None,
 ) -> Outcome:
     if not request.strip() or len(request) > 3000:
         return Outcome("failed", "INVALID_REQUEST", ())
@@ -71,11 +73,17 @@ def run_request(
                 proposal,
             )
         try:
+            if normalize:
+                # El normalizador tambien comprueba el alcance antes de tocar el texto.
+                proposal = normalize(proposal, baseline)
             candidate = apply_to_snapshot(proposal, baseline)
         except PolicyError as exc:
             feedback = str(exc)
             history.append(Attempt(number, feedback))
             continue
+        except CheckError as exc:
+            history.append(Attempt(number, exc.reason))
+            return Outcome("failed", exc.reason, tuple(history))
         # Fallos del validador son fallos de infraestructura, no una aprobacion.
         try:
             validation = validate(dict(candidate))

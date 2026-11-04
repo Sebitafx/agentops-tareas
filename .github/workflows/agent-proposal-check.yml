@@ -30,7 +30,7 @@ jobs:
         with:
           python-version: '3.13'
           cache: pip
-      - run: python -m pip install -r requirements.txt
+      - run: python -m pip install -r requirements-dev.txt
       - run: docker build --file Dockerfile.validation --tag agentops-validator:${{ github.sha }} .
       - name: Generate and validate synthetic proposal in isolated container
         env:

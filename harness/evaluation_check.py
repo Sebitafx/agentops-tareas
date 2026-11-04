@@ -8,6 +8,7 @@ from pathlib import Path
 
 from harness.code_proposer import GroqProposer
 from harness.engine import run_request
+from harness.formatting import normalize_proposal
 from harness.provider_http import CheckError
 from harness.sandbox import DockerValidator
 
@@ -22,7 +23,13 @@ def evaluate(root: Path, image: str, key: str) -> dict:
     validator = DockerValidator(root, image)
     try:
         proposer = GroqProposer(key, visible_paths=frozenset({"taskapp/schemas.py"}))
-        outcome = run_request(REQUEST, validator.baseline, proposer, validator)
+        outcome = run_request(
+            REQUEST,
+            validator.baseline,
+            proposer,
+            validator,
+            lambda proposal, base: normalize_proposal(root, proposal, base),
+        )
     except CheckError as exc:
         return {"status": "failed", "reason": exc.reason, "attempts": []}
     summary = {

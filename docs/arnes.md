@@ -31,6 +31,12 @@ Una propuesta prohibida no llega al validador. No mas de tres intentos; las cuot
 fallos del proveedor y validador no disponible detienen la solicitud. Un fallo nunca
 devuelve un candidato aprobado. Clarificar o rechazar tambien detiene el trabajo.
 
+Antes de validar, Ruff puede normalizar el texto de los archivos Python propuestos:
+ordena imports y aplica formato mediante comandos fijos sobre stdin. Comprueba el
+alcance antes y despues; no escribe el checkout, no importa la aplicacion y no
+recibe secretos del coordinador. Los errores sintacticos siguen llegando al
+validador; esta herramienta no convierte una prueba fallida en una aprobacion.
+
 El estado validated solo se obtiene del validador suministrado. Los tests unitarios
 del motor usan validadores simulados. DockerValidator es la implementacion real:
 ver [validacion aislada](validacion-aislada.md). La politica de rutas y el prompt

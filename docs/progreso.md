@@ -24,6 +24,20 @@ nube son evidencias diferentes.
 
 ## Evidencia anterior (conservar alcance y fecha de cada prueba)
 
+## Correccion de contexto para encabezados
+
+- [x] Detectado: la solicitud de encabezado sin palabra texto/boton elegia Python,
+      dejando al modelo sin HTML/JS ni sus hashes. El workflow 41788460438 fallo
+      sin artefacto de validacion; no conserva el motivo interno de cada intento.
+- [x] Seleccion por texto visible citado y terminos encabezado/cabecera/heading;
+      HTML y JS juntos para conservar el texto despues de resetForm.
+- [x] Se mantienen prioridad de rutas explicitas, estilos y exclusion de tests privados.
+- [x] Motivos estables por intento en logs y respuesta fallida, con enlace a Actions;
+      sin publicar prompts, propuestas ni diagnosticos crudos.
+- [x] E2E exige conservar el encabezado inicial tras crear/editar sin fijar su texto.
+      Suite aislada de esta correccion: 341 pruebas aprobadas, cobertura >=80%.
+- [ ] Integrar la correccion y repetir la solicitud real del participante.
+
 - [x] CRUD publico con PostgreSQL, filtros y API en agentops-tasks.
 - [x] Recepcion real de WhatsApp, firma, lista de remitentes y persistencia en Neon.
 - [x] Respuesta real de saludo/ayuda, registro de solicitudes y consulta de estado.

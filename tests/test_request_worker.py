@@ -105,6 +105,37 @@ def test_context_selection_does_not_include_private_tests():
     assert "tests/test_main.py" not in worker.visible_files("Cambia validacion", base)
     assert "taskapp/static/index.html" in worker.visible_files("Cambia el boton", base)
     assert "taskapp/static/style.css" in worker.visible_files("Cambia el color", base)
+    assert "taskapp/static/style.css" in worker.visible_files(
+        'Cambia el color de "Una cosa a la vez"',
+        {
+            **base,
+            "taskapp/static/index.html": "Una cosa a la vez",
+        },
+    )
+
+
+@pytest.mark.parametrize(
+    "request_text",
+    [
+        'cambiar el encabezado "Una cosa a la vez" por "Mis tareas"',
+        'cambiar "Una cosa a la vez" por "Mis tareas"',
+        "cambia la cabecera del formulario",
+        "change the heading",
+    ],
+)
+def test_visible_heading_request_receives_html_and_reset_logic(request_text):
+    base = {
+        "taskapp/main.py": "server",
+        "taskapp/static/index.html": '<h2 id="form-heading">Una cosa a la vez</h2>',
+        "taskapp/static/app.js": 'heading.textContent = "Una cosa a la vez";',
+        "tests/test_secret.py": "not-for-model",
+    }
+    assert worker.visible_files(request_text, base) == frozenset(
+        {
+            "taskapp/static/index.html",
+            "taskapp/static/app.js",
+        }
+    )
 
 
 def test_worker_deploy_success_requires_confirmation(monkeypatch):

@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import re
 import subprocess
 import urllib.error
 import urllib.request
@@ -67,10 +68,26 @@ def visible_files(request: str, baseline: dict[str, str]) -> frozenset[str]:
     explicit = [path for path in baseline if path.startswith("taskapp/") and path in request]
     if explicit:
         return frozenset(explicit)
+    if any(word in text for word in ("color", "estilo", "css")):
+        return frozenset({"taskapp/static/style.css", "taskapp/static/index.html"})
+    # Un texto visible citado identifica archivos aunque el usuario no diga "texto".
+    literals = re.findall(r"""["“”']([^"“”'\n]{3,200})["“”']""", request)
+    matched = {
+        path
+        for path, content in baseline.items()
+        if path.startswith("taskapp/static/")
+        and path.endswith((".html", ".js"))
+        and any(literal.casefold() in content.casefold() for literal in literals)
+    }
+    if matched:
+        return frozenset({"taskapp/static/index.html", "taskapp/static/app.js"})
     if any(
         word in text
         for word in (
             "botón",
+            "encabezado",
+            "cabecera",
+            "heading",
             "boton",
             "interfaz",
             "color",
@@ -119,6 +136,19 @@ def execute(job_id: UUID, image: str, run_id: str) -> int:
             validator,
             lambda proposal, base: normalize_proposal(root, proposal, base),
         )
+        # Solo etiquetas del controlador, nunca propuesta, prompt ni diagnostico crudo.
+        print(
+            json.dumps(
+                {
+                    "status": outcome.status,
+                    "reason": outcome.reason,
+                    "attempts": [
+                        {"number": item.number, "result": item.result} for item in outcome.attempts
+                    ],
+                }
+            ),
+            flush=True,
+        )
         if outcome.status == "clarify":
             progress("needs_input", outcome.proposal.question)
             return 0
@@ -127,7 +157,13 @@ def execute(job_id: UUID, image: str, run_id: str) -> int:
                 "failed",
                 "No pude aprobar el cambio. Motivo: "
                 + outcome.reason
-                + ". No he integrado ni desplegado cambios.",
+                + ". No he integrado ni desplegado cambios.\n"
+                + "Intentos: "
+                + (
+                    ", ".join(f"{item.number}: {item.result}" for item in outcome.attempts)
+                    or "sin propuesta"
+                )
+                + f"\nEjecución: https://github.com/Sebitafx/agentops-tareas/actions/runs/{run_id}",
             )
             return 1
         base_sha = subprocess.run(

@@ -205,3 +205,23 @@ tokens ni cargas originales de mensajes en este repositorio publico.
   se declaran los paquetes propios de Ruff. Segunda detecto rutas de mypy, alineadas
   con PYTHONPATH. Se conservaron las reglas y las pruebas de comportamiento.
 - La nueva evaluacion de propuesta real en Actions esta pendiente de su ejecucion.
+
+## 3 de noviembre de 2026 — propuesta real validada
+
+- [Evaluacion real](https://github.com/Sebitafx/agentops-tareas/actions/runs/41747916063)
+  aprobo en el primer intento para 2bf86a3a96b4755e6029e0e69fe9e5d9c5564e67.
+  status validated, isolated_validation_passed true; sin cambiar checkout, crear PR
+  ni desplegar. CI del mismo commit tambien aprobo.
+- El intento anterior agoto tres validaciones por imports en una nueva prueba.
+  Ruff normaliza imports y formato sobre stdin sin ejecutar el codigo propuesto;
+  se mantuvieron las pruebas y las reglas de validacion.
+- Cliente Python de GitHub App preparado y probado con RSA ficticio; pendiente
+  su uso real desde el receptor. No se consultaron claves privadas del usuario.
+
+## Publicador de PR preparado
+
+- Control de candidato aprobado, hashes, base vigente y rama nueva por UUID.
+- 264 pruebas en contenedor sin red aprobadas, cobertura 86.46%.
+- Los tests de publicacion simulan GitHub; no se ha creado un PR real con ese modulo.
+- Pendientes: despachar solicitudes, callbacks, PR real, proteccion de main,
+  integracion con revalidacion y despliegue comprobado.

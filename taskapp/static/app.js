@@ -1,6 +1,22 @@
 "use strict";
 const $ = (selector) => document.querySelector(selector);
 let filter = "all";
+let currentTheme = localStorage.getItem('theme') || 'light';
+applyTheme();
+function applyTheme() {
+  if (currentTheme === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    $("#theme-toggle").textContent = 'Modo claro';
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+    $("#theme-toggle").textContent = 'Modo oscuro';
+  }
+  localStorage.setItem('theme', currentTheme);
+}
+$("#theme-toggle").addEventListener('click', () => {
+  currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  applyTheme();
+});
 let editing = null;
 let loadSequence = 0;
 

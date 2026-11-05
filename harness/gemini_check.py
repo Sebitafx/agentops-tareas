@@ -6,9 +6,9 @@ import os
 from harness.provider_http import CheckError, validate_key
 from harness.provider_http import request_json as provider_request_json
 
-DEFAULT_MODEL = "gemini-3.8-flash"
+DEFAULT_MODEL = "gemini-3.5-flash-lite"
 # Revisar precios y compatibilidad antes de autorizar otro modelo.
-ALLOWED_MODELS = frozenset({DEFAULT_MODEL})
+ALLOWED_MODELS = frozenset({DEFAULT_MODEL, "gemini-3.8-flash"})
 API_ROOT = "https://generativelanguage.googleapis.com/v1beta/models/"
 
 

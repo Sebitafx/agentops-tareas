@@ -13,7 +13,7 @@ jobs:
   check-gemini:
     if: github.repository == 'Sebitafx/agentops-tareas' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,5 +24,5 @@ jobs:
       - name: Check model access and one synthetic generation
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: gemini-3.8-flash
+          GEMINI_MODEL: gemini-3.5-flash-lite
         run: python -m harness.gemini_check

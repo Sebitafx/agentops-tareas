@@ -10,6 +10,7 @@ from pathlib import Path
 from harness.code_proposer import GroqProposer
 from harness.engine import run_request
 from harness.formatting import normalize_proposal
+from harness.gemini_proposer import GeminiProposer
 from harness.provider_http import CheckError
 from harness.sandbox import DockerValidator
 
@@ -39,10 +40,16 @@ SCENARIOS = {
 }
 
 
-def evaluate(root: Path, image: str, key: str, scenario: str = "title-limit") -> dict:
+def evaluate(
+    root: Path, image: str, key: str, scenario: str = "title-limit", provider: str = "groq"
+) -> dict:
     request, paths = SCENARIOS[scenario]
     try:
-        proposer = GroqProposer(key, visible_paths=paths)
+        if provider not in {"groq", "gemini"}:
+            raise CheckError("PROVIDER_NOT_ALLOWED")
+        proposer = (GeminiProposer if provider == "gemini" else GroqProposer)(
+            key, visible_paths=paths
+        )
         validator = DockerValidator(root, image)
         validator.scenario = "" if scenario == "ambiguous" else scenario
         outcome = run_request(
@@ -56,6 +63,7 @@ def evaluate(root: Path, image: str, key: str, scenario: str = "title-limit") ->
         return {"status": "failed", "reason": exc.reason, "attempts": []}
     summary = {
         "scenario": scenario,
+        "provider": provider,
         "status": outcome.status,
         "reason": outcome.reason,
         "attempts": [asdict(attempt) for attempt in outcome.attempts],
@@ -77,6 +85,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--image", required=True)
     parser.add_argument("--scenario", choices=[*SCENARIOS, "all"], default="title-limit")
+    parser.add_argument("--provider", choices=["groq", "gemini"], default="groq")
     args = parser.parse_args()
     root = Path.cwd()
     artifacts = root / "artifacts"
@@ -85,7 +94,8 @@ def main() -> int:
     for scenario in SCENARIOS if args.scenario == "all" else [args.scenario]:
         for name in ("synthetic-proposal.json", "latest-validation.json"):
             (artifacts / name).unlink(missing_ok=True)
-        summary = evaluate(root, args.image, os.getenv("GROQ_API_KEY", ""), scenario)
+        key_name = "GEMINI_API_KEY" if args.provider == "gemini" else "GROQ_API_KEY"
+        summary = evaluate(root, args.image, os.getenv(key_name, ""), scenario, args.provider)
         summaries.append(summary)
         target = artifacts / "evaluations" / scenario
         target.mkdir(parents=True, exist_ok=True)

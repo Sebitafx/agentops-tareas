@@ -115,6 +115,24 @@ no hay evidencia aun de que ejecute el puente actualizado.
 
 ## Configuracion de cuentas
 
+### Aclaracion real y contexto de temas visuales
+
+- PR 10 integrado en 806e5db. Se envio desde WhatsApp «Agregar un boton»:
+  solicitud 193f9515-1c8b-4678-9860-4a4182ea0ac1, ejecucion 41938944115.
+  Resultado NEEDS_INPUT con cero intentos IA y pregunta observada en WhatsApp.
+- Se respondio por WhatsApp con modo oscuro/claro persistente, ubicacion en
+  cabecera y prueba de navegador. Mismo UUID reanudado en 41939365322.
+  Primer intento fallo porque el test nuevo omitio importar tasks_url; segundo
+  produjo propuesta invalida y tercero pidio detalles tecnicos de CSS.
+- Se completa el ejemplo de fixture, se instruye elegir clases CSS y se comparte
+  HTML/JS/CSS para temas visuales. Contexto maximo 19000 caracteres y salida de
+  propuestas Gemini hasta 8192 tokens; mismos controles de alcance y pruebas.
+  Pendiente merge de esta correccion y repeticion real de la funcion solicitada.
+- El analisis global de main conserva 20 hallazgos BUG/VULNERABILITY anteriores
+  al PR, aunque el analisis del PR 10 aprobo sin hallazgos nuevos. Pendiente
+  corregir los aplicables y revisar los relacionados con el aislamiento de demo;
+  no se ha cambiado el quality gate ni se han suprimido reglas.
+
 ### Respaldo Gemini comprobado el 4 de noviembre
 
 - Gemini 3.8 Flash devolvio timeout y luego HTTP 503 en las pruebas de acceso.

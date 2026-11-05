@@ -65,7 +65,7 @@ class GeminiProposer(GroqProposer):
 
     def __call__(self, request: str, base: Mapping[str, str], feedback: str) -> Proposal:
         return Proposal.model_validate_json(
-            generate_json(self.key, SYSTEM, self.context(request, base, feedback))
+            generate_json(self.key, SYSTEM, self.context(request, base, feedback), 8192)
         )
 
 

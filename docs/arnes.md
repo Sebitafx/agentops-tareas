@@ -47,7 +47,7 @@ no sustituyen el aislamiento ni demuestran correccion funcional por si solos.
 ## Adaptador y prueba real separada
 
 GroqProposer usa el modelo comprobado openai/gpt-oss-120b, esfuerzo low, JSON Object
-Mode y contrato validado localmente. Limita contexto a 16000 caracteres y salida
+Mode y contrato validado localmente. Limita contexto a 19000 caracteres y salida
 a 4096 tokens. Espera configurable entre llamadas (65 segundos en los workflows)
 para reducir rafagas; no garantiza cuota disponible. Ante un 429 de Groq con
 Retry-After numerico entre 0 y 60 segundos (sin incluir 0), el transporte espera
@@ -89,6 +89,9 @@ JSON completa del modelo permitido. Cada propuesta pasa las mismas politicas,
 pruebas de referencia y contenedor aislado antes de crear un PR. La clave no
 entra al prompt, contenedor ni artefactos. No se activa facturacion ni se infiere
 cuota restante. Un plan gratuito puede seguir agotandose en ambos proveedores.
+Las propuestas Gemini admiten hasta 8192 tokens de salida; la revision contextual
+mantiene su limite menor. Una respuesta truncada sigue siendo rechazada.
+Para modo oscuro se comparten HTML, JS y CSS completos, sin recortar codigo.
 
 Gemini proposal check comprueba acceso y genera un cambio sintetico de etiqueta
 con oraculo E2E; nunca crea PR ni despliega. Se puede lanzar manualmente en main.

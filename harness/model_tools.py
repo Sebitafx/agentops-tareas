@@ -2,7 +2,10 @@
 
 import json
 import os
+import time
 from collections.abc import Callable
+from contextvars import ContextVar
+from dataclasses import dataclass, field
 
 from harness.gemini_proposer import generate_json
 from harness.groq_check import API_ROOT, DEFAULT_MODEL
@@ -18,6 +21,30 @@ RECOVERABLE = {
     "NETWORK_ERROR",
     "PROPOSAL_OUTPUT_LIMIT",
 }
+
+
+@dataclass
+class ProviderSession:
+    selected: str | None = None
+    locked: bool = False
+    unavailable: set[str] = field(default_factory=set)
+
+    def eligible(self, provider):
+        return provider not in self.unavailable and (
+            not self.selected or not self.locked or provider == self.selected
+        )
+
+    def success(self, provider):
+        self.selected = provider
+
+    def failed(self, provider):
+        if self.locked and self.selected == provider:
+            return False
+        self.unavailable.add(provider)
+        return True
+
+
+SESSION: ContextVar[ProviderSession | None] = ContextVar("provider_session", default=None)
 
 
 def conversation_enabled() -> bool:
@@ -40,6 +67,7 @@ def choose(
     output_tokens: int,
     notice=lambda provider: None,
 ) -> dict:
+    session = SESSION.get() or ProviderSession()
     user = json.dumps(context, ensure_ascii=False, default=str)
     function = {
         "type": "function",
@@ -60,7 +88,7 @@ def choose(
         "max_output_tokens": output_tokens,
     }
     key = os.getenv("OPENAI_API_KEY")
-    if key:
+    if key and session.eligible("openai"):
         try:
             if not reserve(reservation(payload, output_tokens)):
                 raise CheckError("BUDGET_LIMIT")
@@ -78,7 +106,9 @@ def choose(
                 or calls[0].get("name") != "next_action"
             ):
                 raise ValueError("INVALID_TOOL_RESPONSE")
-            return json.loads(calls[0]["arguments"])
+            decision = json.loads(calls[0]["arguments"])
+            session.success("openai")
+            return decision
         except CheckError as exc:
             print(
                 json.dumps(
@@ -91,13 +121,22 @@ def choose(
                 ),
                 flush=True,
             )
-            if exc.reason not in RECOVERABLE:
+            if exc.reason not in RECOVERABLE or not session.failed("openai"):
                 raise
     instruction = system + " Devuelve solo JSON con este esquema: " + json.dumps(schema)
-    if gemini := os.getenv("GEMINI_API_KEY"):
+    gemini = os.getenv("GEMINI_API_KEY")
+    if gemini and session.eligible("gemini"):
         notice("Gemini")
         try:
-            return json.loads(generate_json(gemini, instruction, user, output_tokens))
+            for attempt in range(2):
+                try:
+                    decision = json.loads(generate_json(gemini, instruction, user, output_tokens))
+                    session.success("gemini")
+                    return decision
+                except CheckError as exc:
+                    if exc.http_status != 503 or attempt:
+                        raise
+                    time.sleep(2)
         except CheckError as exc:
             print(
                 json.dumps(
@@ -110,9 +149,10 @@ def choose(
                 ),
                 flush=True,
             )
-            if exc.reason not in RECOVERABLE:
+            if exc.reason not in RECOVERABLE or not session.failed("gemini"):
                 raise
-    if groq := os.getenv("GROQ_API_KEY"):
+    groq = os.getenv("GROQ_API_KEY")
+    if groq and session.eligible("groq"):
         notice("Groq")
         response = request_json(
             API_ROOT + "/chat/completions",
@@ -125,11 +165,13 @@ def choose(
                 ],
                 "response_format": {"type": "json_object"},
                 "reasoning_effort": "low",
-                "max_completion_tokens": output_tokens,
+                "max_completion_tokens": min(output_tokens, 3072),
             },
         )
         choice = response["choices"][0]
         if choice["finish_reason"] != "stop":
             raise CheckError("INCOMPLETE_PROPOSAL")
-        return json.loads(choice["message"]["content"])
+        decision = json.loads(choice["message"]["content"])
+        session.success("groq")
+        return decision
     raise CheckError("NO_AVAILABLE_PROVIDER")

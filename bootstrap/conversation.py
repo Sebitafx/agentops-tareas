@@ -2,6 +2,8 @@
 
 import asyncio
 import logging
+import re
+import unicodedata
 from datetime import timedelta
 from typing import Literal
 from uuid import UUID, uuid4
@@ -12,7 +14,7 @@ from starlette.concurrency import run_in_threadpool
 
 from bootstrap.budget import reserve
 from bootstrap.outbox import resume_job
-from harness.model_tools import choose
+from harness.model_tools import SESSION, ProviderSession, choose
 from harness.provider_http import CheckError
 
 logger = logging.getLogger("uvicorn.error.agentops")
@@ -62,6 +64,8 @@ def process(database) -> bool:
         ).fetchall()
     jobs = {str(r[0]): r for r in rows}
     providers = []
+    session = ProviderSession()
+    token = SESSION.set(session)
     try:
         decision = Decision.model_validate(
             choose(
@@ -76,6 +80,8 @@ def process(database) -> bool:
     except (CheckError, ValueError, KeyError, IndexError, TypeError) as exc:
         logger.warning("conversation_failed reason=%s", getattr(exc, "reason", type(exc).__name__))
         decision = None
+    finally:
+        SESSION.reset(token)
     with database.connect() as conn:
         if not conn.execute(
             """SELECT 1 FROM agentops_turns WHERE message_id=%s AND lease=%s
@@ -84,7 +90,7 @@ def process(database) -> bool:
         ).fetchone():
             return False
         reply = (
-            act(conn, mid, sender, decision, jobs)
+            act(conn, mid, sender, decision, jobs, body, session.selected)
             if decision
             else "No pude interpretar tu mensaje ahora. Puedes volver a enviarlo."
         )
@@ -99,16 +105,28 @@ def process(database) -> bool:
         return True
 
 
-def act(conn, mid, sender, decision, jobs):
+def act(conn, mid, sender, decision, jobs, original="", provider=None):
     if decision.action == "answer":
         return decision.text
     if decision.action == "change":
         job = uuid4()
-        conn.execute(
-            "INSERT INTO agentops_jobs(id,message_id,request_text) VALUES (%s,%s,%s)",
-            (job, mid, decision.text),
+        plain = "".join(
+            c
+            for c in unicodedata.normalize("NFKD", original.casefold())
+            if not unicodedata.combining(c)
         )
-        return f"Registré el cambio: {decision.text}\nTe avisaré del avance. Solicitud {job}."
+        keep = bool(re.search(r"no\s+cambi\w*\s+(?:de\s+)?modelo", plain))
+        conn.execute(
+            """INSERT INTO agentops_jobs(id,message_id,request_text,preferred_provider,keep_provider)
+               VALUES (%s,%s,%s,%s,%s)""",
+            (job, mid, decision.text, provider if keep else None, keep),
+        )
+        policy = (
+            f"\nImplementaré con {provider}, sin cambiar de proveedor." if keep and provider else ""
+        )
+        return (
+            f"Registré el cambio: {decision.text}\nTe avisaré del avance. Solicitud {job}." + policy
+        )
     row = jobs.get(str(decision.job_id))
     if not row and not decision.job_id and len(jobs) == 1:
         row = next(iter(jobs.values()))

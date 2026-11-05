@@ -99,6 +99,7 @@ def request_with_retries(request: urllib.request.Request, groq_generation: bool)
                 402: "BILLING_UNAVAILABLE",
                 403: "PERMISSION_DENIED",
                 404: "MODEL_UNAVAILABLE",
+                413: "CONTEXT_TOO_LARGE",
                 429: "QUOTA_OR_RATE_LIMIT",
             }
             reason = hint or reasons.get(

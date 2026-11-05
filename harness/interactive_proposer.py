@@ -33,6 +33,17 @@ y sync_playwright(), chromium.launch(), browser.new_page(), page.goto(tasks_url)
 Elige los detalles técnicos. Solo pregunta si falta un requisito de comportamiento."""
 
 
+def _patch_diagnosis(edit, original, base):
+    """Explica el fallo exacto de un parche para que el intento siguiente sea informado."""
+    if original is None:
+        return "el archivo no existe en el snapshot; para crearlo, before debe quedar vacio"
+    if not edit.before:
+        return "before vacio solo sirve para archivos nuevos"
+    times = original.count(edit.before)
+    state = "duplicado" if times > 1 else "no encontrado"
+    return f"fragmento {state} ({times} coincidencias)"
+
+
 def materialize(step, base):
     files = {}
     for edit in step.edits:
@@ -42,7 +53,14 @@ def materialize(step, base):
         elif original is not None and edit.before and original.count(edit.before) == 1:
             files[edit.path] = original.replace(edit.before, edit.after, 1)
         else:
-            raise ValueError("PATCH_MISMATCH")
+            raise ValueError(
+                "PATCH_MISMATCH en "
+                + edit.path
+                + ": "
+                + _patch_diagnosis(edit, original, base)
+                + "; before="
+                + repr(edit.before[:150])
+            )
     return Proposal(
         action="change",
         summary=step.detail,

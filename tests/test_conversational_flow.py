@@ -111,3 +111,64 @@ def test_ambiguous_patch_rejected():
     )
     with pytest.raises(ValueError, match="PATCH_MISMATCH"):
         coding.materialize(step, {"taskapp/x.js": "aaa"})
+
+
+def test_patch_mismatch_names_file_reason_and_fragment():
+    step = coding.Step(
+        action="change",
+        detail="tema",
+        edits=[coding.Edit(path="taskapp/x.js", before="clase vieja", after="clase nueva")],
+    )
+    with pytest.raises(
+        ValueError,
+        match=r"PATCH_MISMATCH en taskapp/x\.js: fragmento no encontrado \(0 coincidencias\).*clase vieja",
+    ):
+        coding.materialize(step, {"taskapp/x.js": "a"})
+
+
+def test_patch_mismatch_distinguishes_duplicate_from_missing():
+    duplicado = coding.Step(
+        action="change",
+        detail="tema",
+        edits=[coding.Edit(path="taskapp/x.js", before="a", after="b")],
+    )
+    with pytest.raises(ValueError, match=r"duplicado \(2 coincidencias\)"):
+        coding.materialize(duplicado, {"taskapp/x.js": "a\nb\na"})
+    inexistente = coding.Step(
+        action="change",
+        detail="tema",
+        edits=[coding.Edit(path="taskapp/nuevo.js", before="a", after="b")],
+    )
+    with pytest.raises(ValueError, match="el archivo no existe en el snapshot"):
+        coding.materialize(inexistente, {"taskapp/x.js": "a"})
+
+
+def test_engine_feedback_carries_patch_diagnosis_to_next_attempt():
+    from harness.engine import Validation, run_request
+
+    contexts = []
+
+    def propose(request, base, feedback):
+        contexts.append(feedback)
+        if len(contexts) == 1:
+            raise ValueError("PATCH_MISMATCH en taskapp/x.js: fragmento no encontrado")
+        from harness.proposals import Proposal, digest
+
+        return Proposal.model_validate(
+            {
+                "action": "change",
+                "summary": "Reparacion informada",
+                "files": [
+                    {
+                        "path": "taskapp/x.js",
+                        "base_sha256": digest(base["taskapp/x.js"]),
+                        "content": base["taskapp/x.js"] + "\n// aplicado\n",
+                    }
+                ],
+            }
+        )
+
+    base = {"taskapp/x.js": "head\nend"}
+    result = run_request("Peticion ficticia", base, propose, lambda _: Validation(True, "ok"))
+    assert result.status == "validated"
+    assert contexts[1].startswith("INVALID_PROPOSAL: PATCH_MISMATCH en taskapp/x.js")

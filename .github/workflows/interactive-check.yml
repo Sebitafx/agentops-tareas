@@ -27,7 +27,7 @@ jobs:
       - name: Generate and validate with Groq
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          GROQ_MIN_INTERVAL_SECONDS: '65'
+          GROQ_MIN_INTERVAL_SECONDS: '0'
         run: python -m harness.interactive_check --image agentops-validator:${{ github.sha }}
       - uses: actions/upload-artifact@v4
         if: always()

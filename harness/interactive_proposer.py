@@ -100,7 +100,7 @@ class InteractiveProposer:
         context = {
             "request": request,
             "paths": sorted(app),
-            "files": {},
+            "files": {p: s for p, s in app.items() if p.endswith("/index.html") and len(s) <= 8000},
             "sizes": {p: len(s) for p, s in app.items()},
             "diagnostic": feedback[:1800],
         }
@@ -109,9 +109,17 @@ class InteractiveProposer:
                 choose(SYSTEM, context, Step.model_json_schema(), self.reserve, 6400, self.notice)
             )
             if step.action == "change":
-                return materialize(step, base)
+                try:
+                    return materialize(step, base)
+                except ValueError as exc:
+                    context["diagnostic"] = str(exc)[:800]
+                    for edit in step.edits:
+                        if edit.path in app:
+                            context["files"][edit.path] = app[edit.path][:5000]
+                    self.trim(context)
+                    continue
             if step.action in {"refuse", "clarify"}:
-                if step.action == "clarify" and feedback:
+                if step.action == "clarify" and context["diagnostic"]:
                     raise ValueError(
                         "REPAIR_REQUIRES_IMPLEMENTATION: el intento anterior falló por "
                         "un problema técnico. Lee los archivos y repara la propuesta usando "
@@ -123,11 +131,10 @@ class InteractiveProposer:
                     question=step.detail if step.action == "clarify" else None,
                 )
             if step.action == "read":
-                context["files"] = {
-                    step.detail: app.get(step.detail, "Ruta no disponible")[
-                        step.offset : step.offset + 5000
-                    ]
-                }
+                context["files"][step.detail] = app.get(step.detail, "Ruta no disponible")[
+                    step.offset : step.offset + 5000
+                ]
+                self.trim(context, step.detail)
                 context["read_offset"] = step.offset
             else:
                 context["matches"] = [
@@ -137,3 +144,9 @@ class InteractiveProposer:
                     if step.detail.casefold() in line.casefold()
                 ][:10]
         raise ValueError("TOOL_LIMIT")
+
+    @staticmethod
+    def trim(context, current=None):
+        while sum(map(len, context["files"].values())) > 12000 and len(context["files"]) > 1:
+            oldest = next(p for p in context["files"] if p != current)
+            del context["files"][oldest]

@@ -115,6 +115,18 @@ no hay evidencia aun de que ejecute el puente actualizado.
 
 ## Configuracion de cuentas
 
+### Corte de salida en la solicitud de tema
+
+- PR 11 integrado en cef0eb2. Solicitud real 193f9515... reanudada por el
+  participante en 41941059947 termino INCOMPLETE_PROPOSAL, antes de validar.
+  El registro anterior no distinguia length de otros motivos de terminacion.
+- Se identifica por separado el corte confirmado de salida en Groq/Gemini como
+  PROPOSAL_OUTPUT_LIMIT. Groq puede pasar a Gemini por ese motivo, descartando
+  el texto parcial. Otros rechazos incompletos no activan respaldo.
+- Se agrega escenario sintetico task-theme con oraculo de navegador independiente,
+  para comprobar la funcion real antes de otro merge. No crea PR ni despliega.
+  Pendiente resultado de IA real y repeticion de WhatsApp tras integrar.
+
 ### Aclaracion real y contexto de temas visuales
 
 - PR 10 integrado en 806e5db. Se envio desde WhatsApp «Agregar un boton»:

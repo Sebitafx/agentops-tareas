@@ -4,12 +4,17 @@ let filter = "all";
 let currentTheme = localStorage.getItem('theme') || 'light';
 applyTheme();
 function applyTheme() {
+  const toggle = $("#theme-toggle");
   if (currentTheme === 'dark') {
     document.documentElement.setAttribute('data-theme', 'dark');
-    $("#theme-toggle").textContent = '☀️';
+    toggle.setAttribute('aria-pressed', 'true');
+    toggle.querySelector('.icon-sun').style.display = 'inline';
+    toggle.querySelector('.icon-moon').style.display = 'none';
   } else {
     document.documentElement.removeAttribute('data-theme');
-    $("#theme-toggle").textContent = '🌙';
+    toggle.setAttribute('aria-pressed', 'false');
+    toggle.querySelector('.icon-sun').style.display = 'none';
+    toggle.querySelector('.icon-moon').style.display = 'inline';
   }
   localStorage.setItem('theme', currentTheme);
 }

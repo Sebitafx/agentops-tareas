@@ -12,7 +12,7 @@ MAX_RESPONSE_BYTES = 1048576
 MAX_RATE_RETRIES = 2
 MAX_RETRY_AFTER_SECONDS = 60
 GROQ_HOST = "api.groq.com"
-ALLOWED_HOSTS = frozenset({"generativelanguage.googleapis.com", GROQ_HOST})
+ALLOWED_HOSTS = frozenset({"generativelanguage.googleapis.com", "api.openai.com", GROQ_HOST})
 USER_AGENT = "AgentOps-Tareas/0.1 (+https://github.com/Sebitafx/agentops-tareas)"
 _last_groq_started: float | None = None
 
@@ -78,7 +78,7 @@ def request_with_retries(request: urllib.request.Request, groq_generation: bool)
             return send_json(request)
         except urllib.error.HTTPError as exc:
             # Solo un rechazo explicito garantiza que no hubo una generacion aceptada.
-            # No se interpreta ni registra el cuerpo externo (puede contener secretos).
+            # No se registra el cuerpo externo (puede contener secretos).
             delay = retry_delay((exc.headers or {}).get("Retry-After", ""))
             retry = (
                 groq_generation
@@ -87,6 +87,7 @@ def request_with_retries(request: urllib.request.Request, groq_generation: bool)
                 and attempt < MAX_RATE_RETRIES
             )
             code = exc.code
+            hint = safe_error_hint(exc) if code == 400 else None
             exc.close()
             if retry:
                 time.sleep(delay)
@@ -98,9 +99,26 @@ def request_with_retries(request: urllib.request.Request, groq_generation: bool)
                 404: "MODEL_UNAVAILABLE",
                 429: "QUOTA_OR_RATE_LIMIT",
             }
-            reason = reasons.get(code, "PROVIDER_UNAVAILABLE" if code >= 500 else "HTTP_ERROR")
+            reason = hint or reasons.get(
+                code, "PROVIDER_UNAVAILABLE" if code >= 500 else "HTTP_ERROR"
+            )
             raise CheckError(reason, code) from None
     raise CheckError("QUOTA_OR_RATE_LIMIT", 429)
+
+
+def safe_error_hint(error: urllib.error.HTTPError) -> str | None:
+    # Nunca conservar ni imprimir message o failed_generation: pueden contener
+    # prompts o codigo. Solo se reconoce un codigo constante del proveedor.
+    try:
+        body = error.read(MAX_RESPONSE_BYTES + 1)
+        if len(body) > MAX_RESPONSE_BYTES:
+            return None
+        detail = json.loads(body).get("error", {})
+        if isinstance(detail, dict) and detail.get("code") == "json_validate_failed":
+            return "PROVIDER_JSON_GENERATION_FAILED"
+    except (OSError, ValueError, AttributeError, TypeError):
+        pass
+    return None
 
 
 def retry_delay(value: str) -> float | None:
@@ -116,7 +134,9 @@ def send_json(request: urllib.request.Request) -> dict:
         opener = urllib.request.build_opener(NoRedirect())
         # Gemini puede tardar mas en generar con razonamiento. Sigue siendo una
         # unica llamada acotada: un timeout de red no se reintenta automaticamente.
-        timeout = 90 if request.host == "generativelanguage.googleapis.com" else 30
+        timeout = (
+            90 if request.host in {"generativelanguage.googleapis.com", "api.openai.com"} else 30
+        )
         with opener.open(request, timeout=timeout) as response:
             body = response.read(MAX_RESPONSE_BYTES + 1)
         if len(body) > MAX_RESPONSE_BYTES:

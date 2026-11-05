@@ -115,6 +115,22 @@ no hay evidencia aun de que ejecute el puente actualizado.
 
 ## Configuracion de cuentas
 
+### Seleccion de proveedor para temas completos
+
+- PR 12 integrado en 11bded2. Nueva solicitud completa enviada desde el WhatsApp
+  del participante; ejecucion 41968209332 fallo INVALID_REQUEST en Groq antes
+  de validar. No hubo evento de respaldo, PR ni despliegue. El registro antiguo
+  no conserva el subcodigo del HTTP 400, por lo que su causa exacta no esta probada.
+- Los temas que requieren HTML/JS/CSS ahora seleccionan Gemini directamente
+  cuando su clave esta configurada. El resto conserva Groq y el respaldo acotado.
+  Se registra proveedor y motivo; se mantienen contrato, alcance y validacion.
+- Se mejora diagnostico de HTTP 400 reconociendo exclusivamente json_validate_failed,
+  sin exponer mensajes externos, generacion fallida ni secretos. No se reintenta
+  un HTTP 400 generico. Pendientes CI, merge y nueva prueba WhatsApp.
+- Tarea ficticia de persistencia creada en la web antes del despliegue y guardada
+  en artifacts/theme-cloud-persistence-probe.json. Pendiente comprobarla tras
+  despliegue y eliminar exclusivamente ese registro de prueba.
+
 ### Corte de salida en la solicitud de tema
 
 - PR 11 integrado en cef0eb2. Solicitud real 193f9515... reanudada por el
@@ -230,3 +246,13 @@ si la version y salud no quedan confirmadas. Ver [activacion](activacion-final.m
 - [Evidencias](evidencias.md).
 
 Este archivo no sustituye una ejecucion activa ni acredita casos pendientes.
+
+## Conversación de desarrollo por WhatsApp
+
+La nueva ruta se activa al arrancar el receptor con OPENAI_API_KEY. Render interpreta el turno en segundo plano y Neon guarda el historial por remitente. En Actions, Sol medium lee o busca archivos de la aplicación y propone reemplazos por coincidencia única. El controlador publica los avances y comprueba el commit desplegado. Gemini y Groq son respaldos cuando su clave está disponible en el servicio que realiza la llamada.
+
+**Activación:** integrar el PR con sus controles aprobados y desplegar ese commit en agentops-receiver. Abrir /ready y comprobar conversation_worker_running=true. Configurar GEMINI_API_KEY y GROQ_API_KEY también en el receptor para disponer de respaldo en la conversación. Las claves de Actions cubren el trabajo de código. El cambio solicitado en la demo se despliega en agentops-tasks por el pipeline.
+
+El arnés reserva de forma atómica el coste máximo estimado antes de cada llamada a OpenAI. El límite de desarrollo es US$5 acumulados. AGENTOPS_DEMO=1 en el receptor habilita el saldo hasta US$10 **totales**. Las reservas se conservan aunque el proveedor falle o facture menos. Son un tope conservador, no una medición de la factura ni un control del uso externo de esa clave.
+
+**Ensayo:** escribir «Pon un botón», contestar «Para cambiar entre modo oscuro y claro y recordar mi elección», y preguntar «¿Cómo va?». Comprobar un solo trabajo, avisos por fase, PR, pruebas, coincidencia con /version y persistencia del tema después de recargar. Medir desde el primer mensaje hasta la primera respuesta y desde la solicitud completa hasta la versión verificada. La ejecución con credenciales reales y los tiempos de producción requieren el despliegue del receptor.

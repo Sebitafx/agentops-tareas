@@ -36,6 +36,7 @@ jobs:
           JOB_ID: ${{ inputs.job_id }}
           AGENT_APP_ID: ${{ secrets.AGENT_APP_ID }}
           AGENT_APP_PRIVATE_KEY: ${{ secrets.AGENT_APP_PRIVATE_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GROQ_MIN_INTERVAL_SECONDS: '65'

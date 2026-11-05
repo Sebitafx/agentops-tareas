@@ -3,6 +3,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY bootstrap ./bootstrap
+COPY harness ./harness
 COPY taskapp ./taskapp
 RUN useradd --create-home agentops
 USER agentops

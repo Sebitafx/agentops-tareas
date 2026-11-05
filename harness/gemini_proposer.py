@@ -104,4 +104,22 @@ def with_gemini_fallback(primary: Proposer, paths: frozenset[str]) -> Proposer:
     key = os.getenv("GEMINI_API_KEY", "")
     if not key:
         return primary
+    theme_files = {
+        "taskapp/static/index.html",
+        "taskapp/static/app.js",
+        "taskapp/static/style.css",
+    }
+    if theme_files.issubset(paths):
+        print(
+            json.dumps(
+                {
+                    "event": "provider_selected",
+                    "provider": "gemini",
+                    "model": DEFAULT_MODEL,
+                    "reason": "MULTIFILE_UI_CONTEXT",
+                }
+            ),
+            flush=True,
+        )
+        return GeminiProposer(key, paths)
     return QuotaFallback(primary, GeminiProposer(key, paths))

@@ -51,6 +51,7 @@ async def lifespan(application: FastAPI):
         except (psycopg.Error, SchemaError, ValueError, OSError) as exc:
             logger.error("Inicializacion de PostgreSQL fallida (%s)", type(exc).__name__)
     stop = asyncio.Event()
+    conversation = None
     worker = None
     dispatcher = None
     application.state.agent_dispatcher = None
@@ -70,13 +71,20 @@ async def lifespan(application: FastAPI):
     ):
         from bootstrap.outbound import reply_worker
 
+        if os.getenv("OPENAI_API_KEY"):
+            from bootstrap.conversation import worker as conversation_worker
+
+            conversation = asyncio.create_task(
+                conversation_worker(application.state.database, stop)
+            )
+        application.state.conversation_worker = conversation
         worker = asyncio.create_task(reply_worker(application.state.database, stop))
         application.state.reply_worker = worker
     try:
         yield
     finally:
         stop.set()
-        for task in (worker, dispatcher):
+        for task in (worker, dispatcher, conversation):
             if task is None:
                 continue
             try:
@@ -160,6 +168,18 @@ def ready(request: Request) -> dict:
         "agent_configured": agent_configured,
         "agent_dispatcher_running": dispatcher is not None and not dispatcher.done(),
         "agents": "configured" if agent_configured else "not_configured",
+        **(
+            {
+                "conversation_model": "gpt-6.1-sol",
+                "conversation_worker_running": getattr(
+                    request.app.state, "conversation_worker", None
+                )
+                is not None
+                and not request.app.state.conversation_worker.done(),
+            }
+            if os.getenv("OPENAI_API_KEY")
+            else {}
+        ),
     }
 
 

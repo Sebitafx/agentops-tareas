@@ -9,6 +9,7 @@ from bootstrap.database import Database
 def isolated_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     # Nunca conectar por accidente a una base personal desde las pruebas.
     for key in (
+        "OPENAI_API_KEY",
         "DATABASE_URL",
         "META_APP_SECRET",
         "WHATSAPP_PHONE_NUMBER_ID",
@@ -43,6 +44,6 @@ def database():
     database.migrate()
     with database.connect() as conn:
         conn.execute(
-            "TRUNCATE agentops_inbox, agentops_delivery_status, agentops_tasks, agentops_jobs, agentops_outbox"
+            "TRUNCATE agentops_inbox, agentops_delivery_status, agentops_tasks, agentops_jobs, agentops_outbox, agentops_turns"
         )
     yield database

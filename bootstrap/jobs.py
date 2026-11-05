@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import hmac
 import logging
+import os
 from datetime import timedelta
 from typing import Literal
 from uuid import UUID, uuid4
@@ -45,7 +46,9 @@ class Claim(BaseModel):
 class Progress(BaseModel):
     model_config = ConfigDict(extra="forbid")
     lease: UUID
-    state: Literal["needs_input", "failed", "pr_open", "merged", "deploying", "succeeded"]
+    state: Literal[
+        "running", "needs_input", "failed", "pr_open", "merged", "deploying", "succeeded"
+    ]
     summary: str = Field(min_length=1, max_length=2500)
 
 
@@ -89,7 +92,7 @@ def update_job(database: Database, job_id: UUID, progress: Progress) -> None:
         if row["state"] == progress.state and row["summary"] == progress.summary:
             return
         transitions = {
-            "running": {"needs_input", "failed", "pr_open"},
+            "running": {"running", "needs_input", "failed", "pr_open"},
             "pr_open": {"pr_open", "merged", "failed"},
             "merged": {"deploying", "failed"},
             "deploying": {"succeeded", "failed"},
@@ -109,16 +112,39 @@ def update_job(database: Database, job_id: UUID, progress: Progress) -> None:
                 f"Solicitud {job_id}\n{progress.summary}"
                 + (
                     f"\nResponde: responder {job_id} <detalle>"
-                    if progress.state == "needs_input"
+                    if progress.state == "needs_input" and not os.getenv("OPENAI_API_KEY")
                     else ""
                 )
-                + "\n\n"
-                + MENU,
+                + ("" if os.getenv("OPENAI_API_KEY") else "\n\n" + MENU),
                 row["sent_at"] + timedelta(hours=23),
                 f"job:{job_id}:{progress.lease}:{progress.state}:"
                 + hashlib.sha256(progress.summary.encode()).hexdigest()[:16],
             ),
         )
+
+
+class Reservation(BaseModel):
+    lease: UUID
+    amount: int = Field(gt=0, le=400000)
+
+
+@router.post("/{job_id}/reserve")
+def reserve_endpoint(
+    job_id: UUID, data: Reservation, request: Request, authorization: str = Header(default="")
+):
+    from bootstrap.budget import reserve
+
+    authenticate(authorization)
+    db = request.app.state.database
+    if db is None:
+        raise HTTPException(503, "Base no disponible")
+    with db.connect() as conn:
+        if not conn.execute(
+            "SELECT 1 FROM agentops_jobs WHERE id=%s AND lease=%s AND state='running'",
+            (job_id, data.lease),
+        ).fetchone():
+            raise HTTPException(409, "Solicitud inactiva")
+    return {"allowed": reserve(db, data.amount)}
 
 
 @router.post("/{job_id}/claim")

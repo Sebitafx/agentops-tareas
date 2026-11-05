@@ -109,7 +109,7 @@ class InteractiveProposer:
         }
         working = dict(base)
         context["changed_paths"] = []
-        for _ in range(12):
+        for _ in range(16):
             step = Step.model_validate(
                 choose(SYSTEM, context, Step.model_json_schema(), self.reserve, 6400, self.notice)
             )

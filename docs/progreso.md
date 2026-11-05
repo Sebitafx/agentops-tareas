@@ -264,3 +264,11 @@ Se revisaron los artefactos de Actions 42053633819 y 42054554486. Ambos candidat
 El test del adaptador ahora usa datos fijos y conserva las aserciones de contenido completo. Un caso adicional comprueba lectura y parche sobre una aplicación mayor de 40 KB mediante el arnés interactivo. El prompt recuerda mantener el control de tema visible y pulsable. Se registran host, estado HTTP y motivo seguro, sin cuerpos externos, para diagnosticar futuros fallos de proveedor.
 
 Los registros históricos no conservan el estado HTTP final ni el detalle de los INVALID_PROPOSAL. No se atribuyen esos errores a una cuota agotada. La selección de proveedor es política del controlador; pedir por texto que no cambie no configura un bloqueo de proveedor.
+
+## Solicitud 7fedb81d del 5 de noviembre
+
+Actions 42078264292 confirmó OpenAI 429, Gemini 503 y Groq 413. Antes de este arreglo, cada reparación repetía la selección desde OpenAI y enviaba todos los archivos visibles más el diagnóstico a Groq. La petición normalizada tampoco conservaba la preferencia de proveedor del usuario.
+
+Se añade una sesión de proveedor por implementación y una lectura paginada de 5000 caracteres, con búsquedas acotadas y salida Groq limitada a 3072 tokens. Se descartan proveedores rechazados durante el resto del trabajo. Gemini 503 tiene un único reintento tras dos segundos. La preferencia «no cambies de modelo» guarda el proveedor que interpretó correctamente el mensaje y lo fija para Actions. Si ese proveedor está indisponible se informa el fallo, conservando los controles de validación.
+
+Requiere integrar el PR y desplegar agentops-receiver para aplicar la migración 006_provider_policy.sql y devolver la preferencia en la reclamación del trabajo. Las ejecuciones anteriores conservan sus estados. La reanudación de pruebas reales requiere una solicitud nueva después del despliegue.

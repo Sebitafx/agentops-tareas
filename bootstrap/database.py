@@ -11,7 +11,7 @@ from psycopg.rows import dict_row
 from bootstrap.outbox import queue_receipt
 
 MIGRATIONS = Path(__file__).parent / "migrations"
-SCHEMA_VERSION = "005_conversation.sql"
+SCHEMA_VERSION = "006_provider_policy.sql"
 
 
 class SchemaError(Exception):

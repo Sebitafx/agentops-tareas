@@ -151,7 +151,12 @@ def execute(job_id: UUID, image: str, run_id: str) -> int:
                     progress("running", f"Continúo la solicitud con {provider} de respaldo.")
                     announced.add(provider)
 
-            proposer = InteractiveProposer(reserve, notice)
+            proposer = InteractiveProposer(
+                reserve,
+                notice,
+                preferred=claimed.get("preferred_provider"),
+                locked=claimed.get("keep_provider", False),
+            )
             progress("running", "Estoy preparando el cambio en GitHub Actions.")
 
             def checked_validator(candidate):

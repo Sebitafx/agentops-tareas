@@ -74,6 +74,8 @@ def claim_job(database: Database, job_id: UUID, run_id: str) -> dict:
             "id": str(job_id),
             "lease": str(lease),
             "request": row["request_text"] or row["body"],
+            "preferred_provider": row["preferred_provider"],
+            "keep_provider": row["keep_provider"],
         }
 
 

@@ -69,6 +69,10 @@ def visible_files(request: str, baseline: dict[str, str]) -> frozenset[str]:
     explicit = [path for path in baseline if path.startswith("taskapp/") and path in request]
     if explicit:
         return frozenset(explicit)
+    if any(word in text for word in ("modo oscuro", "modo claro", "dark mode", "tema oscuro")):
+        return frozenset(
+            {"taskapp/static/index.html", "taskapp/static/app.js", "taskapp/static/style.css"}
+        )
     if any(word in text for word in ("color", "estilo", "css")):
         return frozenset({"taskapp/static/style.css", "taskapp/static/index.html"})
     # Un texto visible citado identifica archivos aunque el usuario no diga "texto".

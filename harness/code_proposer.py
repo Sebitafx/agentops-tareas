@@ -7,7 +7,7 @@ from harness.groq_check import API_ROOT, DEFAULT_MODEL
 from harness.proposals import Proposal, digest
 from harness.provider_http import CheckError, request_json, validate_key
 
-MAX_CONTEXT_CHARS = 16000
+MAX_CONTEXT_CHARS = 19000
 # Misma marca que usa el validador aislado; el diagnostico nunca se imputa como codigo.
 FEEDBACK_MARKER = "\n[diagnostico acotado]\n"
 SYSTEM = """Eres el agente de desarrollo de AgentOps Tareas, una demo Python 3.13.
@@ -19,6 +19,8 @@ dependencias, workflows, configuracion ni reglas de evaluacion. No agregues nuev
 dependencias, integraciones ni migraciones. No ofrezcas despliegues ya realizados.
 Usa Ruff, tipos, SQL parametrizado, errores controlados y separa API de persistencia.
 Si falta un requisito que afecte al resultado, action=clarify con una pregunta.
+Elige tu las clases CSS y detalles tecnicos; no se los preguntes al usuario.
+Pregunta solo por requisitos de comportamiento o decisiones visuales relevantes.
 Rechaza peticiones fuera de alcance con action=refuse. Para cambios, devuelve el
 contenido completo de hasta 4 archivos y sus hashes base exactos (null para nuevos).
 Las funciones nuevas o correcciones de logica necesitan una prueba de comportamiento.
@@ -31,6 +33,7 @@ Sin ese parámetro, tasks_url es la función importada, NO una URL: nunca la pas
 así a page.goto ni modifiques la fixture de referencia para arreglarlo.
 Ejemplo válido (adapta la aserción al requisito):
 from playwright.sync_api import expect, sync_playwright
+from tests.test_tasks_e2e import tasks_url as tasks_url
 def test_ui(tasks_url):
     with sync_playwright() as p:
         browser = p.chromium.launch()

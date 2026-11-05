@@ -79,7 +79,7 @@ def test_gemini_preserves_contract_context_and_secret_boundary(monkeypatch):
     assert context["files"]["taskapp/sample.py"]["content"] == BASE["taskapp/sample.py"]
     assert context["validation_feedback"] == "Fallo previo"
     assert calls[0]["generationConfig"]["responseMimeType"] == "application/json"
-    assert calls[0]["generationConfig"]["maxOutputTokens"] == 4096
+    assert calls[0]["generationConfig"]["maxOutputTokens"] == 8192
 
 
 @pytest.mark.parametrize(

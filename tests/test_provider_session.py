@@ -94,3 +94,47 @@ def test_user_provider_preference_survives_normalized_request(database, monkeypa
     claimed = claim_job(database, job, "123")
     assert claimed["preferred_provider"] == "gemini" and claimed["keep_provider"]
     assert claimed["request"] == "Mejorar tema"
+
+
+def test_repair_does_not_turn_technical_failure_into_user_question(monkeypatch):
+    responses = iter(
+        [
+            {
+                "action": "change",
+                "detail": "Tema",
+                "edits": [{"path": "taskapp/style.css", "before": "missing", "after": "black"}],
+            },
+            {
+                "action": "clarify",
+                "detail": "Please provide the exact modifications for FastAPI endpoints",
+            },
+            {
+                "action": "change",
+                "detail": "Tema",
+                "edits": [{"path": "taskapp/style.css", "before": "white", "after": "black"}],
+            },
+        ]
+    )
+    contexts = []
+
+    def decide(system, context, *_):
+        contexts.append(context.copy())
+        return next(responses)
+
+    monkeypatch.setattr(coding, "choose", decide)
+    outcome = run_request(
+        "Mejora contraste oscuro",
+        {"taskapp/style.css": "white"},
+        coding.InteractiveProposer(lambda _: True, lambda _: None),
+        lambda _: Validation(True, "ok"),
+    )
+    assert outcome.status == "validated"
+    assert "REPAIR_REQUIRES_IMPLEMENTATION" in contexts[2]["diagnostic"]
+
+
+def test_initial_missing_behavior_can_still_be_clarified(monkeypatch):
+    monkeypatch.setattr(
+        coding, "choose", lambda *_: {"action": "clarify", "detail": "¿Qué debe hacer el botón?"}
+    )
+    proposal = coding.InteractiveProposer(lambda _: True, lambda _: None)("Pon un control", {}, "")
+    assert proposal.action == "clarify" and proposal.question == "¿Qué debe hacer el botón?"

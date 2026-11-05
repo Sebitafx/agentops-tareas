@@ -272,3 +272,9 @@ Actions 42078264292 confirmó OpenAI 429, Gemini 503 y Groq 413. Antes de este a
 Se añade una sesión de proveedor por implementación y una lectura paginada de 5000 caracteres, con búsquedas acotadas y salida Groq limitada a 3072 tokens. Se descartan proveedores rechazados durante el resto del trabajo. Gemini 503 tiene un único reintento tras dos segundos. La preferencia «no cambies de modelo» guarda el proveedor que interpretó correctamente el mensaje y lo fija para Actions. Si ese proveedor está indisponible se informa el fallo, conservando los controles de validación.
 
 Requiere integrar el PR y desplegar agentops-receiver para aplicar la migración 006_provider_policy.sql y devolver la preferencia en la reclamación del trabajo. Las ejecuciones anteriores conservan sus estados. La reanudación de pruebas reales requiere una solicitud nueva después del despliegue.
+
+## Aclaración técnica ajena a la petición
+
+La solicitud 6cce99b0 terminó en NEEDS_INPUT en Actions 42081268780, tras una propuesta inválida y una pregunta sobre endpoints FastAPI. Los registros confirman OpenAI 429 y Gemini 503 antes del respaldo Groq. El controlador terminó sin crear PR ni desplegar.
+
+El generador recibe ahora una descripción explícita de los tres archivos del frontend y conserva la aclaración inicial de requisitos. Si ya está reparando un fallo técnico, una nueva pregunta se devuelve como diagnóstico de reparación para el siguiente intento, conservando el requisito original. Se mantienen los límites y las pruebas. Esta corrección solo afecta Actions y se aplica al integrar la rama; no requiere otro despliegue del receptor.

@@ -64,7 +64,8 @@ def test_gemini_preserves_contract_context_and_secret_boundary(monkeypatch):
     calls = []
 
     def transport(key, model, payload):
-        assert key == "test-only" and model == gemini.DEFAULT_MODEL
+        assert key == "test-only"
+        assert model == gemini.DEFAULT_MODEL
         assert "test-only" not in json.dumps(payload)
         calls.append(payload)
         return response()
@@ -98,16 +99,18 @@ def test_gemini_preserves_contract_context_and_secret_boundary(monkeypatch):
 )
 def test_incomplete_or_unexpected_gemini_responses_are_rejected(monkeypatch, bad):
     monkeypatch.setattr(gemini, "request_json", lambda *_: bad)
+    proposer = gemini.GeminiProposer("test-only")
     with pytest.raises(CheckError):
-        gemini.GeminiProposer("test-only")("Cambio", BASE, "")
+        proposer("Cambio", BASE, "")
 
 
 def test_gemini_invalid_context_never_calls_network(monkeypatch):
     monkeypatch.setattr(
         gemini, "request_json", lambda *_: pytest.fail("No enviar contexto excesivo")
     )
+    proposer = gemini.GeminiProposer("test-only")
     with pytest.raises(CheckError, match="CONTEXT_TOO_LARGE"):
-        gemini.GeminiProposer("test-only")("Cambio", {"taskapp/a.py": "x" * 16000}, "")
+        proposer("Cambio", {"taskapp/a.py": "x" * 16000}, "")
 
 
 def test_fallback_stays_on_gemini_during_repair_and_still_validates(capsys):
@@ -127,10 +130,12 @@ def test_fallback_stays_on_gemini_during_repair_and_still_validates(capsys):
 
     outcome = run_request("Cambio", BASE, gemini.QuotaFallback(primary, secondary), validate)
     assert outcome.status == "validated"
-    assert len(primary_calls) == 1 and len(secondary_calls) == len(validations) == 2
+    assert len(primary_calls) == 1
+    assert len(secondary_calls) == len(validations) == 2
     assert secondary_calls[1][2] == "Fallo real de prueba"
     event = json.loads(capsys.readouterr().out)
-    assert event["from"] == "groq" and event["to"] == "gemini"
+    assert event["from"] == "groq"
+    assert event["to"] == "gemini"
 
 
 @pytest.mark.parametrize(
@@ -153,7 +158,8 @@ def test_both_providers_limited_stop_without_approving():
     result = run_request(
         "Cambio", BASE, gemini.QuotaFallback(limited, limited), lambda *_: pytest.fail("No validar")
     )
-    assert result.status == "failed" and result.candidate is None
+    assert result.status == "failed"
+    assert result.candidate is None
     assert len(result.attempts) == 1
 
 

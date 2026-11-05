@@ -22,8 +22,10 @@ def test_vague_addition_asks_before_any_generation_or_validation(task_request):
         lambda *_: pytest.fail("No gastar cuota inventando requisitos"),
         lambda *_: pytest.fail("No ejecutar cambios ambiguos"),
     )
-    assert result.status == "clarify" and result.attempts == ()
-    assert result.proposal.question and "pulsarlo" in result.proposal.question
+    assert result.status == "clarify"
+    assert result.attempts == ()
+    assert result.proposal.question
+    assert "pulsarlo" in result.proposal.question
     assert result.candidate is None
 
 
@@ -53,7 +55,8 @@ def test_concrete_theme_request_reaches_proposer():
         propose,
         lambda _: Validation(True, ""),
     )
-    assert result.status == "validated" and len(calls) == 1
+    assert result.status == "validated"
+    assert len(calls) == 1
 
 
 def install_responses(monkeypatch, codes, retry_after="2", url=URL):
@@ -83,7 +86,8 @@ def test_explicit_short_rate_limit_recovers_with_identical_request(monkeypatch):
     assert transport.request_json(URL, {"Authorization": "Bearer test-only"}, {"demo": 1}) == {
         "ok": True
     }
-    assert waits == [1.5, 1.5] and len(calls) == 3
+    assert waits == [1.5, 1.5]
+    assert len(calls) == 3
     assert calls[0] is calls[1] is calls[2]
     assert all(body.closed for body in bodies)
 
@@ -93,14 +97,16 @@ def test_unknown_or_long_quota_does_not_retry(monkeypatch, delay):
     calls, waits, _ = install_responses(monkeypatch, [429], delay)
     with pytest.raises(transport.CheckError, match="^QUOTA_OR_RATE_LIMIT$"):
         transport.request_json(URL, {}, {})
-    assert len(calls) == 1 and waits == []
+    assert len(calls) == 1
+    assert waits == []
 
 
 def test_repeated_rate_limit_stops_after_two_waits(monkeypatch):
     calls, waits, _ = install_responses(monkeypatch, [429, 429, 429], "60")
     with pytest.raises(transport.CheckError, match="^QUOTA_OR_RATE_LIMIT$"):
         transport.request_json(URL, {}, {})
-    assert len(calls) == 3 and sum(waits) == 120
+    assert len(calls) == 3
+    assert sum(waits) == 120
 
 
 @pytest.mark.parametrize("code", [400, 401, 403, 404, 500])
@@ -108,8 +114,10 @@ def test_other_http_errors_are_never_retried(monkeypatch, code):
     calls, waits, _ = install_responses(monkeypatch, [code])
     with pytest.raises(transport.CheckError) as error:
         transport.request_json(URL, {}, {})
-    assert error.value.http_status == code and "private" not in str(error.value)
-    assert len(calls) == 1 and waits == []
+    assert error.value.http_status == code
+    assert "private" not in str(error.value)
+    assert len(calls) == 1
+    assert waits == []
 
 
 def test_gemini_rate_limit_is_not_retried(monkeypatch):
@@ -117,4 +125,5 @@ def test_gemini_rate_limit_is_not_retried(monkeypatch):
     calls, waits, _ = install_responses(monkeypatch, [429], url=url)
     with pytest.raises(transport.CheckError, match="QUOTA_OR_RATE_LIMIT"):
         transport.request_json(url, {}, {})
-    assert len(calls) == 1 and waits == []
+    assert len(calls) == 1
+    assert waits == []

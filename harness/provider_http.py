@@ -11,7 +11,8 @@ import urllib.request
 MAX_RESPONSE_BYTES = 1048576
 MAX_RATE_RETRIES = 2
 MAX_RETRY_AFTER_SECONDS = 60
-ALLOWED_HOSTS = frozenset({"generativelanguage.googleapis.com", "api.groq.com"})
+GROQ_HOST = "api.groq.com"
+ALLOWED_HOSTS = frozenset({"generativelanguage.googleapis.com", GROQ_HOST})
 USER_AGENT = "AgentOps-Tareas/0.1 (+https://github.com/Sebitafx/agentops-tareas)"
 _last_groq_started: float | None = None
 
@@ -52,7 +53,8 @@ def request_json(url: str, headers: dict[str, str], payload: dict | None = None)
         or parts.fragment
     ):
         raise CheckError("ENDPOINT_NOT_ALLOWED")
-    if parts.netloc == "api.groq.com" and parts.path.endswith("/chat/completions"):
+    groq_generation = parts.netloc == GROQ_HOST and parts.path.endswith("/chat/completions")
+    if groq_generation:
         pace_groq()
     request = urllib.request.Request(
         url,
@@ -60,6 +62,10 @@ def request_json(url: str, headers: dict[str, str], payload: dict | None = None)
         headers={**headers, "Content-Type": "application/json", "User-Agent": USER_AGENT},
         method="POST" if payload is not None else "GET",
     )
+    return request_with_retries(request, groq_generation)
+
+
+def request_with_retries(request: urllib.request.Request, groq_generation: bool) -> dict:
     for attempt in range(MAX_RATE_RETRIES + 1):
         try:
             return send_json(request)
@@ -68,8 +74,7 @@ def request_json(url: str, headers: dict[str, str], payload: dict | None = None)
             # No se interpreta ni registra el cuerpo externo (puede contener secretos).
             delay = retry_delay((exc.headers or {}).get("Retry-After", ""))
             retry = (
-                parts.netloc == "api.groq.com"
-                and parts.path.endswith("/chat/completions")
+                groq_generation
                 and exc.code == 429
                 and delay is not None
                 and attempt < MAX_RATE_RETRIES

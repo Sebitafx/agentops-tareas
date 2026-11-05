@@ -115,6 +115,29 @@ no hay evidencia aun de que ejecute el puente actualizado.
 
 ## Configuracion de cuentas
 
+### Respaldo Gemini comprobado el 4 de noviembre
+
+- Gemini 3.8 Flash devolvio timeout y luego HTTP 503 en las pruebas de acceso.
+  Gemini 3.5 Flash-Lite supero acceso y genero el cambio sintetico de etiqueta
+  al primer intento, validado en Docker sin red/secretos con oraculo E2E:
+  [41937215387](https://github.com/Sebitafx/agentops-tareas/actions/runs/41937215387).
+  Esa evaluacion no creo PR ni desplego la propuesta sintetica.
+- El respaldo entra solo ante cuota de Groq, conserva diagnosticos e intentos
+  restantes y exige las mismas politicas y pruebas. Se registra el proveedor.
+  Si ambos fallan, se detiene; no se ha activado facturacion.
+- Suite completa local del adaptador: 383 aprobadas, 4 omitidas, 82,66 %.
+  Las omisiones corresponden a escenarios de benchmark y broker con Docker host,
+  que se ejecutan por separado. Gemini real aprobo el benchmark de etiqueta.
+- Se envio `hola` desde el WhatsApp del participante mediante control de la app
+  y se observo respuesta del agente con los comandos. Pendiente probar la nueva
+  aclaracion y su reanudacion despues de integrar el PR 10.
+- PR 10: CI de push y PR aprobadas para ee0a6e3; SonarCloud detecto instalacion
+  de dependencias sin hashes en el workflow nuevo. Se agrega requirements-dev.lock
+  con versiones resueltas y hashes de wheels, instalacion solo binaria y limpieza
+  de hallazgos de mantenibilidad. Pendiente nueva comprobacion de Sonar y merge.
+- El conector GitHub devuelve 403 al integrar; control de Brave detenido por no
+  poder verificar URL. No se cambia proteccion ni se extraen credenciales.
+
 ### Actualizacion del 4 de noviembre: aclaraciones y cuota
 
 - Recorrido real confirmado por el participante: solicitud dd85cc4c-9d9d-4b7e-a4fe-2ccbddaae976,

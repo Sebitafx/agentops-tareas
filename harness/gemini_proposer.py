@@ -35,20 +35,22 @@ def generate_json(key: str, system: str, context: str, max_tokens: int = 4096) -
         parts = candidates[0]["content"]["parts"]
         if not isinstance(parts, list) or not parts:
             raise CheckError("INVALID_RESPONSE")
-        texts = []
-        for part in parts:
-            if not isinstance(part, dict) or set(part) - {"text", "thought", "thoughtSignature"}:
-                raise CheckError("INVALID_RESPONSE")
-            if not part.get("thought", False):
-                if not isinstance(part.get("text"), str):
-                    raise CheckError("INVALID_RESPONSE")
-                texts.append(part["text"])
-        text = "".join(texts)
+        text = "".join(visible_part(part) for part in parts)
         if not text.strip():
             raise CheckError("INVALID_RESPONSE")
     except (KeyError, IndexError, TypeError, AttributeError):
         raise CheckError("INVALID_RESPONSE") from None
     return text
+
+
+def visible_part(part: dict) -> str:
+    if not isinstance(part, dict) or set(part) - {"text", "thought", "thoughtSignature"}:
+        raise CheckError("INVALID_RESPONSE")
+    if part.get("thought", False):
+        return ""
+    if not isinstance(part.get("text"), str):
+        raise CheckError("INVALID_RESPONSE")
+    return part["text"]
 
 
 class GeminiProposer(GroqProposer):

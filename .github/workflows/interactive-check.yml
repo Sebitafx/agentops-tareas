@@ -1,0 +1,39 @@
+name: Interactive repair check
+on:
+  push:
+    branches: ['agentops/fix/structured-proposals']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: interactive-repair-check
+  cancel-in-progress: false
+jobs:
+  synthetic:
+    if: github.repository == 'Sebitafx/agentops-tareas' && github.actor == 'Sebitafx' && github.ref == 'refs/heads/agentops/fix/structured-proposals'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+      - run: python -m pip install --only-binary=:all: --require-hashes -r requirements-dev.lock
+      - run: docker build --file Dockerfile.validation --tag agentops-validator:${{ github.sha }} .
+      - name: Generate and validate with Groq
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_MIN_INTERVAL_SECONDS: '65'
+        run: python -m harness.interactive_check --image agentops-validator:${{ github.sha }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: interactive-repair-validation
+          path: |
+            artifacts/interactive-summary.json
+            artifacts/interactive-proposal.json
+            artifacts/latest-validation.json
+          retention-days: 3

@@ -47,6 +47,29 @@ class ProviderSession:
 SESSION: ContextVar[ProviderSession | None] = ContextVar("provider_session", default=None)
 
 
+def strict_schema(schema):
+    """Subset compartido: el validador local conserva todas las restricciones."""
+    if isinstance(schema, list):
+        return [strict_schema(item) for item in schema]
+    if not isinstance(schema, dict):
+        return schema
+    omitted = {
+        "default",
+        "title",
+        "format",
+        "minimum",
+        "maximum",
+        "minLength",
+        "maxLength",
+        "maxItems",
+    }
+    result = {key: strict_schema(value) for key, value in schema.items() if key not in omitted}
+    if result.get("type") == "object":
+        result["additionalProperties"] = False
+        result["required"] = list(result.get("properties", {}))
+    return result
+
+
 def conversation_enabled() -> bool:
     return bool(os.getenv("OPENAI_API_KEY") or os.getenv("GEMINI_API_KEY"))
 
@@ -163,7 +186,14 @@ def choose(
                     {"role": "system", "content": instruction},
                     {"role": "user", "content": user},
                 ],
-                "response_format": {"type": "json_object"},
+                "response_format": {
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "next_action",
+                        "strict": True,
+                        "schema": strict_schema(schema),
+                    },
+                },
                 "reasoning_effort": "low",
                 "max_completion_tokens": min(output_tokens, 3072),
             },

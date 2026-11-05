@@ -12,6 +12,8 @@ from uuid import UUID, uuid4
 
 from psycopg.rows import dict_row
 
+from harness.model_tools import conversation_enabled
+
 if TYPE_CHECKING:
     import psycopg
 
@@ -54,11 +56,15 @@ def resume_command(conn: psycopg.Connection, message: IncomingMessage) -> str:
         job_id = UUID(parts[1])
     except ValueError:
         return "El id no tiene un formato válido. No se reanudó ninguna solicitud."
+    return resume_job(conn, message.sender, job_id, parts[2])
+
+
+def resume_job(conn: psycopg.Connection, sender: str, job_id: UUID, detail: str) -> str:
     waiting = conn.execute(
         """SELECT COALESCE(j.request_text,i.body),j.summary
         FROM agentops_jobs j JOIN agentops_inbox i ON i.message_id=j.message_id
         WHERE j.id=%s AND i.sender=%s AND j.state='needs_input' FOR UPDATE OF j""",
-        (job_id, message.sender),
+        (job_id, sender),
     ).fetchone()
     if not waiting:
         return "No encontré una aclaración pendiente con ese id asociada a tu número."
@@ -66,7 +72,7 @@ def resume_command(conn: psycopg.Connection, message: IncomingMessage) -> str:
         """UPDATE agentops_jobs SET request_text=%s, state='received',
         dispatch_attempts=0,worker_run_id=NULL,lease=NULL,next_dispatch_at=now(),
         updated_at=now() WHERE id=%s""",
-        (waiting[0] + "\nPregunta del agente: " + waiting[1] + "\nAclaracion: " + parts[2], job_id),
+        (waiting[0] + "\nPregunta del agente: " + waiting[1] + "\nAclaracion: " + detail, job_id),
     )
     return f"Aclaración recibida ✅\nSolicitud {job_id}. Intentaré reanudar el agente."
 
@@ -119,6 +125,9 @@ def help_text() -> str:
 
 def queue_receipt(conn: psycopg.Connection, message: IncomingMessage) -> None:
     normalized = " ".join(message.body.split()).casefold()
+    if conversation_enabled() and not normalized.startswith(("estado ", "responder ")):
+        conn.execute("INSERT INTO agentops_turns(message_id) VALUES (%s)", (message.message_id,))
+        return
     if is_help(message.body):
         reply = help_text()
     elif normalized == "estado":
@@ -169,7 +178,7 @@ def queue_receipt(conn: psycopg.Connection, message: IncomingMessage) -> None:
                 "Si falta información, te preguntaré por aquí.\n"
                 f"Consulta: estado {job_id}\nAún no se confirma ningún cambio ni despliegue."
             )
-    if MENU not in reply:
+    if MENU not in reply and not conversation_enabled():
         reply += "\n\n" + MENU
     conn.execute(
         """INSERT INTO agentops_outbox (id, message_id, body, expires_at, event_key)

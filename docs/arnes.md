@@ -77,6 +77,10 @@ esa evidencia con validated. El workflow tiene contents read y no recibe tokens 
 ## Respaldo Gemini ante cuota
 
 Si GEMINI_API_KEY esta configurada en Actions, WhatsApp y la reparacion de pushes
+seleccionan Gemini directamente cuando necesitan HTML, JavaScript y CSS juntos.
+Se registra provider_selected con motivo MULTIFILE_UI_CONTEXT. Es la ruta probada
+por el benchmark real de modo oscuro; evita pasar esa propuesta extensa por Groq.
+Para el resto de solicitudes
 usan Groq primero. QUOTA_OR_RATE_LIMIT o un corte confirmado por limite de salida
 (PROPOSAL_OUTPUT_LIMIT) activan Gemini 3.5 Flash-Lite, con un evento
 provider_fallback en el registro. No cambia por fallos de autenticacion, red,
@@ -93,6 +97,9 @@ cuota restante. Un plan gratuito puede seguir agotandose en ambos proveedores.
 No se cambia de proveedor por un rechazo de seguridad ni por una respuesta
 incompleta de causa desconocida. La salida parcial siempre se descarta, y si
 Gemini tambien agota su salida se detiene sin validar ni publicar ese texto.
+Un HTTP 400 no se reintenta ni activa respaldo de manera generica. Se reconoce
+solo el codigo json_validate_failed como PROVIDER_JSON_GENERATION_FAILED para
+diagnosticar el fallo sin registrar message, failed_generation, prompts ni claves.
 Las propuestas Gemini admiten hasta 8192 tokens de salida; la revision contextual
 mantiene su limite menor. Una respuesta truncada sigue siendo rechazada.
 Para modo oscuro se comparten HTML, JS y CSS completos, sin recortar codigo.

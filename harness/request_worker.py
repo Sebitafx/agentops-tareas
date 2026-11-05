@@ -17,6 +17,7 @@ from harness.engine import run_request
 from harness.formatting import normalize_proposal
 from harness.gemini_proposer import with_gemini_fallback
 from harness.integrate import IntegrationError, integrate_pr
+from harness.model_tools import conversation_enabled
 from harness.provider_http import CheckError
 from harness.publish import publish_pr
 from harness.sandbox import DockerValidator
@@ -36,7 +37,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 def control(settings: AppSettings, job_id: UUID, action: str, body: dict) -> dict:
-    if action not in {"claim", "progress"} or not isinstance(job_id, UUID):
+    if action not in {"claim", "progress", "reserve"} or not isinstance(job_id, UUID):
         raise ControlError(400)
     request = urllib.request.Request(
         f"{RECEIVER}/internal/jobs/{job_id}/{action}",
@@ -131,15 +132,42 @@ def execute(job_id: UUID, image: str, run_id: str) -> int:
         root = Path.cwd()
         validator = DockerValidator(root, image)
         request = claimed["request"]
-        proposer = GroqProposer(
-            os.getenv("GROQ_API_KEY", ""), visible_paths=visible_files(request, validator.baseline)
-        )
-        proposer = with_gemini_fallback(proposer, visible_files(request, validator.baseline))
+        checked_validator = validator
+        if conversation_enabled():
+            from harness.interactive_proposer import InteractiveProposer
+
+            def reserve(amount):
+                return (
+                    control(settings, job_id, "reserve", {"lease": lease, "amount": amount}).get(
+                        "allowed"
+                    )
+                    is True
+                )
+
+            announced = set()
+
+            def notice(provider):
+                if provider not in announced:
+                    progress("running", f"Continúo la solicitud con {provider} de respaldo.")
+                    announced.add(provider)
+
+            proposer = InteractiveProposer(reserve, notice)
+            progress("running", "Estoy preparando el cambio en GitHub Actions.")
+
+            def checked_validator(candidate):
+                progress("running", "Estoy ejecutando las pruebas en el contenedor.")
+                return validator(candidate)
+        else:
+            proposer = GroqProposer(
+                os.getenv("GROQ_API_KEY", ""),
+                visible_paths=visible_files(request, validator.baseline),
+            )
+            proposer = with_gemini_fallback(proposer, visible_files(request, validator.baseline))
         outcome = run_request(
             request,
             validator.baseline,
             proposer,
-            validator,
+            checked_validator,
             lambda proposal, base: normalize_proposal(root, proposal, base),
         )
         # Solo etiquetas del controlador, nunca propuesta, prompt ni diagnostico crudo.

@@ -3,6 +3,8 @@
 !requirements.txt
 !bootstrap/
 !bootstrap/**
+!harness/
+!harness/*.py
 !taskapp/
 !taskapp/**
 **/__pycache__

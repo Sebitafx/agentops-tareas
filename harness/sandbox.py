@@ -75,7 +75,7 @@ def container_command(image: str, folder: Path, name: str, scenario: str = "") -
         raise ValueError("INVALID_CONTAINER_NAME")
     if "," in str(folder):
         raise ValueError("INVALID_MOUNT_PATH")
-    if scenario not in {"", "title-limit", "button-label", "task-search"}:
+    if scenario not in {"", "title-limit", "button-label", "task-search", "task-theme"}:
         raise ValueError("INVALID_VALIDATION_SCENARIO")
     return [
         "docker",

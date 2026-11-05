@@ -77,7 +77,8 @@ esa evidencia con validated. El workflow tiene contents read y no recibe tokens 
 ## Respaldo Gemini ante cuota
 
 Si GEMINI_API_KEY esta configurada en Actions, WhatsApp y la reparacion de pushes
-usan Groq primero. Solo QUOTA_OR_RATE_LIMIT activa Gemini 3.5 Flash-Lite, con un evento
+usan Groq primero. QUOTA_OR_RATE_LIMIT o un corte confirmado por limite de salida
+(PROPOSAL_OUTPUT_LIMIT) activan Gemini 3.5 Flash-Lite, con un evento
 provider_fallback en el registro. No cambia por fallos de autenticacion, red,
 contrato, politicas ni pruebas. Una vez activado, conserva Gemini durante los
 intentos restantes de esa solicitud. No aumenta los tres intentos de correccion.
@@ -89,12 +90,16 @@ JSON completa del modelo permitido. Cada propuesta pasa las mismas politicas,
 pruebas de referencia y contenedor aislado antes de crear un PR. La clave no
 entra al prompt, contenedor ni artefactos. No se activa facturacion ni se infiere
 cuota restante. Un plan gratuito puede seguir agotandose en ambos proveedores.
+No se cambia de proveedor por un rechazo de seguridad ni por una respuesta
+incompleta de causa desconocida. La salida parcial siempre se descarta, y si
+Gemini tambien agota su salida se detiene sin validar ni publicar ese texto.
 Las propuestas Gemini admiten hasta 8192 tokens de salida; la revision contextual
 mantiene su limite menor. Una respuesta truncada sigue siendo rechazada.
 Para modo oscuro se comparten HTML, JS y CSS completos, sin recortar codigo.
 
-Gemini proposal check comprueba acceso y genera un cambio sintetico de etiqueta
-con oraculo E2E; nunca crea PR ni despliega. Se puede lanzar manualmente en main.
+Gemini proposal check comprueba acceso y genera un cambio sintetico de modo oscuro
+con oraculo E2E de alternancia, fondo oscuro real y persistencia al recargar;
+nunca crea PR ni despliega. Se puede lanzar manualmente en main.
 Durante esta implementacion se ejecuta tambien al actualizar el adaptador en la
 rama de mantenimiento explicitamente permitida, con actor/repo restringidos.
 Ver [API Gemini](https://ai.google.dev/api/generate-content) y

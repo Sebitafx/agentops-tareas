@@ -2,7 +2,7 @@ name: Gemini proposal check
 on:
   workflow_dispatch:
   push:
-    branches: ['agentops/fix/clarification-rate-limits']
+    branches: ['agentops/fix/clarification-rate-limits', 'agentops/fix/truncated-proposal-fallback']
     paths:
       - '.github/workflows/gemini-proposal-check.yml'
       - 'harness/gemini_proposer.py'
@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   synthetic:
-    if: github.repository == 'Sebitafx/agentops-tareas' && github.actor == 'Sebitafx' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/agentops/fix/clarification-rate-limits')
+    if: github.repository == 'Sebitafx/agentops-tareas' && github.actor == 'Sebitafx' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/agentops/fix/clarification-rate-limits' || github.ref == 'refs/heads/agentops/fix/truncated-proposal-fallback')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -36,7 +36,7 @@ jobs:
       - name: Generate synthetic UI change and validate without network or secrets
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: python -m harness.evaluation_check --provider gemini --scenario button-label --image agentops-validator:${{ github.sha }}
+        run: python -m harness.evaluation_check --provider gemini --scenario task-theme --image agentops-validator:${{ github.sha }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:

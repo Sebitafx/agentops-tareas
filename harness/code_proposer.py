@@ -5,7 +5,7 @@ from collections.abc import Mapping
 
 from harness.groq_check import API_ROOT, DEFAULT_MODEL
 from harness.proposals import Proposal, digest
-from harness.provider_http import CheckError, request_json, validate_key
+from harness.provider_http import CheckError, ProposalOutputLimit, request_json, validate_key
 
 MAX_CONTEXT_CHARS = 19000
 # Misma marca que usa el validador aislado; el diagnostico nunca se imputa como codigo.
@@ -135,6 +135,8 @@ class GroqProposer:
             choice = result["choices"][0]
             message = choice["message"]
             text = message["content"]
+            if choice["finish_reason"] == "length" and not message.get("tool_calls"):
+                raise ProposalOutputLimit()
             if choice["finish_reason"] != "stop" or message.get("tool_calls"):
                 raise CheckError("INCOMPLETE_PROPOSAL")
             if not isinstance(text, str):

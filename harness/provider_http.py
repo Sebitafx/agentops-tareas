@@ -29,6 +29,13 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
+class ProposalOutputLimit(CheckError):
+    """El proveedor confirma que corto la generacion por limite de salida."""
+
+    def __init__(self) -> None:
+        super().__init__("PROPOSAL_OUTPUT_LIMIT")
+
+
 def pace_groq() -> None:
     global _last_groq_started
     try:

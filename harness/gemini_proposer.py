@@ -8,7 +8,7 @@ from harness.code_proposer import SYSTEM, GroqProposer
 from harness.engine import Proposer
 from harness.gemini_check import ALLOWED_MODELS, DEFAULT_MODEL, request_json
 from harness.proposals import Proposal
-from harness.provider_http import CheckError, validate_key
+from harness.provider_http import CheckError, ProposalOutputLimit, validate_key
 
 
 def generate_json(key: str, system: str, context: str, max_tokens: int = 4096) -> str:
@@ -30,6 +30,8 @@ def generate_json(key: str, system: str, context: str, max_tokens: int = 4096) -
         raise CheckError("UNEXPECTED_GENERATION_MODEL")
     try:
         candidates = result["candidates"]
+        if len(candidates) == 1 and candidates[0]["finishReason"] == "MAX_TOKENS":
+            raise ProposalOutputLimit()
         if len(candidates) != 1 or candidates[0]["finishReason"] != "STOP":
             raise CheckError("INCOMPLETE_PROPOSAL")
         parts = candidates[0]["content"]["parts"]
@@ -80,7 +82,7 @@ class QuotaFallback:
             try:
                 return self.primary(request, base, feedback)
             except CheckError as exc:
-                if exc.reason != "QUOTA_OR_RATE_LIMIT":
+                if exc.reason != "QUOTA_OR_RATE_LIMIT" and not isinstance(exc, ProposalOutputLimit):
                     raise
                 self.using_secondary = True
                 print(

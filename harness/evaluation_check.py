@@ -20,6 +20,15 @@ REQUEST = (
     "acepte 180 caracteres y rechace 181 en ambos modelos Pydantic."
 )
 SCENARIOS = {
+    "task-theme": (
+        "Agrega un boton despues de la marca en la cabecera para alternar toda la interfaz "
+        "entre modo oscuro y claro. Texto inicial Modo oscuro; activado debe decir Modo claro. "
+        "Elige las clases y una paleta oscura legible. Conserva la seleccion al recargar, "
+        "el CRUD y los filtros. Agrega prueba de navegador. Sin nuevas dependencias ni migraciones.",
+        frozenset(
+            {"taskapp/static/index.html", "taskapp/static/app.js", "taskapp/static/style.css"}
+        ),
+    ),
     "title-limit": (REQUEST, frozenset({"taskapp/schemas.py"})),
     "button-label": (
         'Cambia el texto del boton de crear de "Crear tarea" a "Agregar tarea". '

@@ -97,8 +97,10 @@ def run_request(
         except CheckError as exc:
             history.append(Attempt(number, exc.reason))
             return Outcome("failed", exc.reason, tuple(history))
-        except (ValidationError, ValueError):
-            feedback = ("INVALID_PROPOSAL\n" + last_validation_feedback)[:4000]
+        except (ValidationError, ValueError) as exc:
+            # Diagnostico primero y acotado; la causa previa no debe desplazarlo.
+            diagnosis = f"INVALID_PROPOSAL: {exc}"
+            feedback = (diagnosis + "\n" + last_validation_feedback)[:4000]
             history.append(Attempt(number, "INVALID_PROPOSAL"))
             continue
         if proposal.action != "change":

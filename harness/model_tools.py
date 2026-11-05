@@ -163,15 +163,33 @@ def choose(
                     {"role": "system", "content": instruction},
                     {"role": "user", "content": user},
                 ],
-                "response_format": {"type": "json_object"},
+                "tools": [
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": "next_action",
+                            "description": "Leer, buscar, editar o responder usando el contrato.",
+                            "parameters": schema,
+                        },
+                    }
+                ],
+                "tool_choice": {"type": "function", "function": {"name": "next_action"}},
+                "parallel_tool_calls": False,
                 "reasoning_effort": "low",
                 "max_completion_tokens": min(output_tokens, 3072),
             },
         )
-        choice = response["choices"][0]
-        if choice["finish_reason"] != "stop":
-            raise CheckError("INCOMPLETE_PROPOSAL")
-        decision = json.loads(choice["message"]["content"])
+        try:
+            choice = response["choices"][0]
+            calls = choice["message"].get("tool_calls", [])
+            if choice["finish_reason"] != "tool_calls" or len(calls) != 1:
+                raise CheckError("INVALID_TOOL_RESPONSE")
+            call = calls[0]["function"]
+            if call["name"] != "next_action":
+                raise CheckError("INVALID_TOOL_RESPONSE")
+            decision = json.loads(call["arguments"])
+        except (KeyError, IndexError, TypeError):
+            raise CheckError("INVALID_TOOL_RESPONSE") from None
         session.success("groq")
         return decision
     raise CheckError("NO_AVAILABLE_PROVIDER")

@@ -1,5 +1,6 @@
 """Bucle acotado de correccion con proveedor y validacion separados."""
 
+import json
 import re
 import unicodedata
 from collections.abc import Callable, Mapping
@@ -98,6 +99,30 @@ def run_request(
             history.append(Attempt(number, exc.reason))
             return Outcome("failed", exc.reason, tuple(history))
         except (ValidationError, ValueError) as exc:
+            # Tipos y ubicaciones, sin input, cuerpo externo ni fragmentos de código.
+            if isinstance(exc, ValidationError):
+                errors = [
+                    {"type": e["type"], "loc": list(e["loc"])}
+                    for e in exc.errors(include_input=False)
+                ]
+                detail = {"kind": "schema", "errors": errors[:6]}
+            else:
+                known = str(exc).split(";", 1)[0]
+                detail = {
+                    "kind": known
+                    if known.startswith(
+                        (
+                            "PATCH_MISMATCH",
+                            "REPAIR_REQUIRES_IMPLEMENTATION",
+                            "TOOL_LIMIT",
+                            "INVALID_TOOL_RESPONSE",
+                        )
+                    )
+                    else "ValueError"
+                }
+            print(
+                json.dumps({"event": "invalid_proposal", "attempt": number, **detail}), flush=True
+            )
             # Diagnostico primero y acotado; la causa previa no debe desplazarlo.
             diagnosis = f"INVALID_PROPOSAL: {exc}"
             feedback = (diagnosis + "\n" + last_validation_feedback)[:4000]

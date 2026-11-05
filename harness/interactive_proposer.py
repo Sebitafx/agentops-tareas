@@ -18,7 +18,7 @@ class Edit(BaseModel):
 
 class Step(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    action: Literal["read", "search", "change", "clarify", "refuse"]
+    action: Literal["read", "search", "edit", "finish", "change", "clarify", "refuse"]
     detail: str = Field(min_length=1, max_length=600)
     offset: int = Field(default=0, ge=0, le=131072)
     edits: list[Edit] = Field(default_factory=list, max_length=16)
@@ -30,8 +30,11 @@ index.html define el DOM, style.css los estilos y app.js las interacciones.
 La API de tareas ya existe. Una petición visual puede implementarse en esos archivos.
 Solo modifica taskapp y añade pruebas nuevas bajo tests/agent_added/test_*.py. No cambies dependencias.
 Usa read (detail=ruta, offset=posición de carácter) o search (detail=texto) para contexto.
-Cada lectura devuelve hasta 5000 caracteres. Usa offset para leer el siguiente fragmento. Para change devuelve edits:
+Cada lectura devuelve hasta 5000 caracteres. Usa offset para leer el siguiente fragmento. Para edit devuelve edits:
 before debe ser un fragmento exacto único; vacío solo para archivo nuevo. after es su reemplazo.
+edit aplica cambios al borrador y devuelve el resultado para continuar. Usa finish solo
+cuando hayas cubierto TODOS los requisitos, incluidos CSS y pruebas solicitadas.
+change es compatible con clientes antiguos; utiliza edit y finish.
 Puedes encadenar ediciones sobre un archivo. Conserva el comportamiento existente. Añade prueba para funciones nuevas.
 Para Playwright importa from tests.test_tasks_e2e import tasks_url as tasks_url, usa def test_ui(tasks_url)
 y sync_playwright(), chromium.launch(), browser.new_page(), page.goto(tasks_url). No hay fixture page.
@@ -100,18 +103,66 @@ class InteractiveProposer:
         context = {
             "request": request,
             "paths": sorted(app),
-            "files": {},
+            "files": {p: s for p, s in app.items() if p.endswith("/index.html") and len(s) <= 8000},
             "sizes": {p: len(s) for p, s in app.items()},
             "diagnostic": feedback[:1800],
         }
-        for _ in range(8):
+        working = dict(base)
+        context["changed_paths"] = []
+        for _ in range(12):
             step = Step.model_validate(
                 choose(SYSTEM, context, Step.model_json_schema(), self.reserve, 6400, self.notice)
             )
-            if step.action == "change":
-                return materialize(step, base)
+            if step.action == "finish":
+                return Proposal(
+                    action="change",
+                    summary=step.detail,
+                    files=[
+                        FileChange(
+                            path=p,
+                            base_sha256=digest(base[p]) if p in base else None,
+                            content=content,
+                        )
+                        for p, content in working.items()
+                        if base.get(p) != content
+                    ],
+                )
+            if step.action in {"edit", "change"}:
+                try:
+                    proposal = materialize(step, working)
+                    for file in proposal.files:
+                        working[file.path] = file.content
+                        app[file.path] = file.content
+                        context["files"][file.path] = file.content[:5000]
+                    if step.action == "change":
+                        return Proposal(
+                            action="change",
+                            summary=step.detail,
+                            files=[
+                                FileChange(
+                                    path=p,
+                                    base_sha256=digest(base[p]) if p in base else None,
+                                    content=c,
+                                )
+                                for p, c in working.items()
+                                if base.get(p) != c
+                            ],
+                        )
+                    context["changed_paths"] = [p for p in working if working[p] != base.get(p)]
+                    context["last_result"] = (
+                        "Edición aplicada al borrador. Continúa con lo pendiente o usa finish."
+                    )
+                    self.trim(context)
+                    continue
+                except ValueError as exc:
+                    context["diagnostic"] = str(exc)[:800]
+                    for edit in step.edits:
+                        if edit.path in app:
+                            context["files"][edit.path] = app[edit.path][:5000]
+                    self.trim(context)
+                    continue
             if step.action in {"refuse", "clarify"}:
-                if step.action == "clarify" and feedback:
+                if step.action == "clarify" and context["diagnostic"]:
                     raise ValueError(
                         "REPAIR_REQUIRES_IMPLEMENTATION: el intento anterior falló por "
                         "un problema técnico. Lee los archivos y repara la propuesta usando "
@@ -123,11 +174,10 @@ class InteractiveProposer:
                     question=step.detail if step.action == "clarify" else None,
                 )
             if step.action == "read":
-                context["files"] = {
-                    step.detail: app.get(step.detail, "Ruta no disponible")[
-                        step.offset : step.offset + 5000
-                    ]
-                }
+                context["files"][step.detail] = app.get(step.detail, "Ruta no disponible")[
+                    step.offset : step.offset + 5000
+                ]
+                self.trim(context, step.detail)
                 context["read_offset"] = step.offset
             else:
                 context["matches"] = [
@@ -137,3 +187,9 @@ class InteractiveProposer:
                     if step.detail.casefold() in line.casefold()
                 ][:10]
         raise ValueError("TOOL_LIMIT")
+
+    @staticmethod
+    def trim(context, current=None):
+        while sum(map(len, context["files"].values())) > 12000 and len(context["files"]) > 1:
+            oldest = next(p for p in context["files"] if p != current)
+            del context["files"][oldest]

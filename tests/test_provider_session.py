@@ -35,9 +35,23 @@ def test_patch_repair_keeps_provider_and_bounded_context(monkeypatch):
             raise CheckError("QUOTA_OR_RATE_LIMIT", 429)
         assert len(payload["messages"][1]["content"]) < 10000
         assert payload["max_completion_tokens"] == 3072
+        assert payload["tool_choice"]["function"]["name"] == "next_action"
+        assert payload["tools"][0]["function"]["parameters"]["properties"]["action"]
         return {
             "choices": [
-                {"finish_reason": "stop", "message": {"content": json.dumps(next(outputs))}}
+                {
+                    "finish_reason": "tool_calls",
+                    "message": {
+                        "tool_calls": [
+                            {
+                                "function": {
+                                    "name": "next_action",
+                                    "arguments": json.dumps(next(outputs)),
+                                }
+                            }
+                        ]
+                    },
+                }
             ]
         }
 
@@ -138,3 +152,34 @@ def test_initial_missing_behavior_can_still_be_clarified(monkeypatch):
     )
     proposal = coding.InteractiveProposer(lambda _: True, lambda _: None)("Pon un control", {}, "")
     assert proposal.action == "clarify" and proposal.question == "¿Qué debe hacer el botón?"
+
+
+def test_multiple_edits_are_draft_until_finish(monkeypatch):
+    responses = iter(
+        [
+            {
+                "action": "edit",
+                "detail": "Markup",
+                "edits": [{"path": "taskapp/a.html", "before": "old", "after": "new"}],
+            },
+            {
+                "action": "edit",
+                "detail": "Estilo",
+                "edits": [{"path": "taskapp/a.css", "before": "white", "after": "black"}],
+            },
+            {"action": "finish", "detail": "Cambio completo"},
+        ]
+    )
+    observed = []
+
+    def decide(system, context, *_):
+        observed.append(list(context["changed_paths"]))
+        return next(responses)
+
+    monkeypatch.setattr(coding, "choose", decide)
+    base = {"taskapp/a.html": "old", "taskapp/a.css": "white"}
+    proposal = coding.InteractiveProposer(lambda _: True, lambda _: None)("Tema", base, "")
+    from harness.proposals import apply_to_snapshot
+
+    assert apply_to_snapshot(proposal, base) == {"taskapp/a.html": "new", "taskapp/a.css": "black"}
+    assert observed == [[], ["taskapp/a.html"], ["taskapp/a.html", "taskapp/a.css"]]

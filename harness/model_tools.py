@@ -80,6 +80,17 @@ def choose(
                 raise ValueError("INVALID_TOOL_RESPONSE")
             return json.loads(calls[0]["arguments"])
         except CheckError as exc:
+            print(
+                json.dumps(
+                    {
+                        "event": "provider_attempt_failed",
+                        "provider": "openai",
+                        "reason": exc.reason,
+                        "http_status": exc.http_status,
+                    }
+                ),
+                flush=True,
+            )
             if exc.reason not in RECOVERABLE:
                 raise
     instruction = system + " Devuelve solo JSON con este esquema: " + json.dumps(schema)
@@ -88,6 +99,17 @@ def choose(
         try:
             return json.loads(generate_json(gemini, instruction, user, output_tokens))
         except CheckError as exc:
+            print(
+                json.dumps(
+                    {
+                        "event": "provider_attempt_failed",
+                        "provider": "gemini",
+                        "reason": exc.reason,
+                        "http_status": exc.http_status,
+                    }
+                ),
+                flush=True,
+            )
             if exc.reason not in RECOVERABLE:
                 raise
     if groq := os.getenv("GROQ_API_KEY"):

@@ -30,6 +30,8 @@ before debe ser un fragmento exacto único; vacío solo para archivo nuevo. afte
 Puedes encadenar ediciones sobre un archivo. Conserva el comportamiento existente. Añade prueba para funciones nuevas.
 Para Playwright importa from tests.test_tasks_e2e import tasks_url as tasks_url, usa def test_ui(tasks_url)
 y sync_playwright(), chromium.launch(), browser.new_page(), page.goto(tasks_url). No hay fixture page.
+Conserva el elemento interactivo #theme-toggle visible, accesible y pulsable cuando
+rediseñes el tema. Puedes estilizar un button como switch con SVG y aria-pressed.
 Elige los detalles técnicos. Solo pregunta si falta un requisito de comportamiento."""
 
 

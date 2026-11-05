@@ -1,6 +1,7 @@
 """Transporte acotado; solo reintenta 429 de Groq con Retry-After breve."""
 
 import json
+import logging
 import math
 import os
 import time
@@ -102,6 +103,9 @@ def request_with_retries(request: urllib.request.Request, groq_generation: bool)
             }
             reason = hint or reasons.get(
                 code, "PROVIDER_UNAVAILABLE" if code >= 500 else "HTTP_ERROR"
+            )
+            logging.getLogger(__name__).warning(
+                "provider_http_rejected host=%s status=%d reason=%s", request.host, code, reason
             )
             raise CheckError(reason, code) from None
     raise CheckError("QUOTA_OR_RATE_LIMIT", 429)

@@ -256,3 +256,11 @@ La nueva ruta se activa al arrancar el receptor con OPENAI_API_KEY o GEMINI_API_
 El arnés reserva de forma atómica el coste máximo estimado antes de cada llamada a OpenAI. El límite de desarrollo es US$5 acumulados. AGENTOPS_DEMO=1 en el receptor habilita el saldo hasta US$10 **totales**. Las reservas se conservan aunque el proveedor falle o facture menos. Son un tope conservador, no una medición de la factura ni un control del uso externo de esa clave.
 
 **Ensayo:** escribir «Pon un botón», contestar «Para cambiar entre modo oscuro y claro y recordar mi elección», y preguntar «¿Cómo va?». Comprobar un solo trabajo, avisos por fase, PR, pruebas, coincidencia con /version y persistencia del tema después de recargar. Medir desde el primer mensaje hasta la primera respuesta y desde la solicitud completa hasta la versión verificada. La ejecución con credenciales reales y los tiempos de producción requieren el despliegue del receptor.
+
+## Revisión de fallos de tema del 5 de noviembre
+
+Se revisaron los artefactos de Actions 42053633819 y 42054554486. Ambos candidatos fallaron por CONTEXT_TOO_LARGE en test_theme_request_context, que leía los archivos cambiantes de la aplicación para probar el límite de un adaptador antiguo. La segunda ejecución también ocultó el input #theme-toggle y rompió el E2E que lo pulsa.
+
+El test del adaptador ahora usa datos fijos y conserva las aserciones de contenido completo. Un caso adicional comprueba lectura y parche sobre una aplicación mayor de 40 KB mediante el arnés interactivo. El prompt recuerda mantener el control de tema visible y pulsable. Se registran host, estado HTTP y motivo seguro, sin cuerpos externos, para diagnosticar futuros fallos de proveedor.
+
+Los registros históricos no conservan el estado HTTP final ni el detalle de los INVALID_PROPOSAL. No se atribuyen esos errores a una cuota agotada. La selección de proveedor es política del controlador; pedir por texto que no cambie no configura un bloqueo de proveedor.

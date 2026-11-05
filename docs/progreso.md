@@ -125,7 +125,12 @@ no hay evidencia aun de que ejecute el puente actualizado.
   el texto parcial. Otros rechazos incompletos no activan respaldo.
 - Se agrega escenario sintetico task-theme con oraculo de navegador independiente,
   para comprobar la funcion real antes de otro merge. No crea PR ni despliega.
-  Pendiente resultado de IA real y repeticion de WhatsApp tras integrar.
+  Gemini real aprobado en 41945306398: fallo validacion en intentos 1 y 2,
+  aprobo en intento 3. Candidato con HTML/CSS/JS y test nuevo; 392 pruebas
+  aprobadas, 4 omitidas, 82,74 % de cobertura. Se comprobo que la aplicacion
+  original sin tema falla el oraculo. Suite base: 390 aprobadas, 5 omitidas.
+  Pendiente merge y nueva solicitud real WhatsApp: la anterior quedo failed
+  y no se reanuda con responder. No se desplego el candidato sintetico.
 
 ### Aclaracion real y contexto de temas visuales
 

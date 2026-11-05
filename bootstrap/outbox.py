@@ -12,6 +12,8 @@ from uuid import UUID, uuid4
 
 from psycopg.rows import dict_row
 
+from harness.model_tools import conversation_enabled
+
 if TYPE_CHECKING:
     import psycopg
 
@@ -123,7 +125,7 @@ def help_text() -> str:
 
 def queue_receipt(conn: psycopg.Connection, message: IncomingMessage) -> None:
     normalized = " ".join(message.body.split()).casefold()
-    if os.getenv("OPENAI_API_KEY") and not normalized.startswith(("estado ", "responder ")):
+    if conversation_enabled() and not normalized.startswith(("estado ", "responder ")):
         conn.execute("INSERT INTO agentops_turns(message_id) VALUES (%s)", (message.message_id,))
         return
     if is_help(message.body):
@@ -176,7 +178,7 @@ def queue_receipt(conn: psycopg.Connection, message: IncomingMessage) -> None:
                 "Si falta información, te preguntaré por aquí.\n"
                 f"Consulta: estado {job_id}\nAún no se confirma ningún cambio ni despliegue."
             )
-    if MENU not in reply and not os.getenv("OPENAI_API_KEY"):
+    if MENU not in reply and not conversation_enabled():
         reply += "\n\n" + MENU
     conn.execute(
         """INSERT INTO agentops_outbox (id, message_id, body, expires_at, event_key)

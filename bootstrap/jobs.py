@@ -4,7 +4,6 @@ import asyncio
 import hashlib
 import hmac
 import logging
-import os
 from datetime import timedelta
 from typing import Literal
 from uuid import UUID, uuid4
@@ -24,6 +23,7 @@ from bootstrap.github_app import (
     installation_token,
 )
 from bootstrap.outbox import MENU, help_text, is_help
+from harness.model_tools import conversation_enabled
 
 logger = logging.getLogger("uvicorn.error.agentops")
 router = APIRouter(prefix="/internal/jobs", include_in_schema=False)
@@ -112,10 +112,10 @@ def update_job(database: Database, job_id: UUID, progress: Progress) -> None:
                 f"Solicitud {job_id}\n{progress.summary}"
                 + (
                     f"\nResponde: responder {job_id} <detalle>"
-                    if progress.state == "needs_input" and not os.getenv("OPENAI_API_KEY")
+                    if progress.state == "needs_input" and not conversation_enabled()
                     else ""
                 )
-                + ("" if os.getenv("OPENAI_API_KEY") else "\n\n" + MENU),
+                + ("" if conversation_enabled() else "\n\n" + MENU),
                 row["sent_at"] + timedelta(hours=23),
                 f"job:{job_id}:{progress.lease}:{progress.state}:"
                 + hashlib.sha256(progress.summary.encode()).hexdigest()[:16],

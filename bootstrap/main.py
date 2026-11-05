@@ -17,6 +17,7 @@ from starlette.concurrency import run_in_threadpool
 from bootstrap.database import SCHEMA_VERSION, Database, SchemaError
 from bootstrap.jobs import router as jobs_router
 from bootstrap.whatsapp import MAX_BODY_BYTES, Event, ReceiverSettings, extract, valid_signature
+from harness.model_tools import conversation_enabled
 
 # Hereda los handlers de Uvicorn: INFO debe ser visible en Render, sin access logs.
 logger = logging.getLogger("uvicorn.error.agentops")
@@ -71,7 +72,7 @@ async def lifespan(application: FastAPI):
     ):
         from bootstrap.outbound import reply_worker
 
-        if os.getenv("OPENAI_API_KEY"):
+        if conversation_enabled():
             from bootstrap.conversation import worker as conversation_worker
 
             conversation = asyncio.create_task(
@@ -170,14 +171,16 @@ def ready(request: Request) -> dict:
         "agents": "configured" if agent_configured else "not_configured",
         **(
             {
-                "conversation_model": "gpt-6.1-sol",
+                "conversation_model": "gpt-6.1-sol"
+                if os.getenv("OPENAI_API_KEY")
+                else "gemini-3.5-flash-lite",
                 "conversation_worker_running": getattr(
                     request.app.state, "conversation_worker", None
                 )
                 is not None
                 and not request.app.state.conversation_worker.done(),
             }
-            if os.getenv("OPENAI_API_KEY")
+            if conversation_enabled()
             else {}
         ),
     }

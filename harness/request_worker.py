@@ -17,6 +17,7 @@ from harness.engine import run_request
 from harness.formatting import normalize_proposal
 from harness.gemini_proposer import with_gemini_fallback
 from harness.integrate import IntegrationError, integrate_pr
+from harness.model_tools import conversation_enabled
 from harness.provider_http import CheckError
 from harness.publish import publish_pr
 from harness.sandbox import DockerValidator
@@ -132,7 +133,7 @@ def execute(job_id: UUID, image: str, run_id: str) -> int:
         validator = DockerValidator(root, image)
         request = claimed["request"]
         checked_validator = validator
-        if os.getenv("OPENAI_API_KEY"):
+        if conversation_enabled():
             from harness.interactive_proposer import InteractiveProposer
 
             def reserve(amount):

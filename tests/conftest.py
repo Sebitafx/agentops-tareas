@@ -10,6 +10,8 @@ def isolated_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     # Nunca conectar por accidente a una base personal desde las pruebas.
     for key in (
         "OPENAI_API_KEY",
+        "GEMINI_API_KEY",
+        "GROQ_API_KEY",
         "DATABASE_URL",
         "META_APP_SECRET",
         "WHATSAPP_PHONE_NUMBER_ID",

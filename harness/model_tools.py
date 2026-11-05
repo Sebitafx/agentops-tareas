@@ -12,11 +12,16 @@ SOL = "gpt-6.1-sol"
 RECOVERABLE = {
     "BUDGET_LIMIT",
     "QUOTA_OR_RATE_LIMIT",
+    "BILLING_UNAVAILABLE",
     "MODEL_UNAVAILABLE",
     "PROVIDER_UNAVAILABLE",
     "NETWORK_ERROR",
     "PROPOSAL_OUTPUT_LIMIT",
 }
+
+
+def conversation_enabled() -> bool:
+    return bool(os.getenv("OPENAI_API_KEY") or os.getenv("GEMINI_API_KEY"))
 
 
 def reservation(payload: dict, output_tokens: int) -> int:

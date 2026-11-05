@@ -249,7 +249,7 @@ Este archivo no sustituye una ejecucion activa ni acredita casos pendientes.
 
 ## Conversación de desarrollo por WhatsApp
 
-La nueva ruta se activa al arrancar el receptor con OPENAI_API_KEY. Render interpreta el turno en segundo plano y Neon guarda el historial por remitente. En Actions, Sol medium lee o busca archivos de la aplicación y propone reemplazos por coincidencia única. El controlador publica los avances y comprueba el commit desplegado. Gemini y Groq son respaldos cuando su clave está disponible en el servicio que realiza la llamada.
+La nueva ruta se activa al arrancar el receptor con OPENAI_API_KEY o GEMINI_API_KEY. Si solo hay Gemini, la misma conversación y las herramientas funcionan desde el primer turno. Render interpreta el turno en segundo plano y Neon guarda el historial por remitente. En Actions, Sol medium lee o busca archivos de la aplicación y propone reemplazos por coincidencia única. El controlador publica los avances y comprueba el commit desplegado. Gemini y Groq son respaldos cuando su clave está disponible en el servicio que realiza la llamada.
 
 **Activación:** integrar el PR con sus controles aprobados y desplegar ese commit en agentops-receiver. Abrir /ready y comprobar conversation_worker_running=true. Configurar GEMINI_API_KEY y GROQ_API_KEY también en el receptor para disponer de respaldo en la conversación. Las claves de Actions cubren el trabajo de código. El cambio solicitado en la demo se despliega en agentops-tasks por el pipeline.
 

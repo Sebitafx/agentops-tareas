@@ -95,6 +95,7 @@ def request_with_retries(request: urllib.request.Request, groq_generation: bool)
             reasons = {
                 400: "INVALID_REQUEST",
                 401: "AUTHENTICATION_FAILED",
+                402: "BILLING_UNAVAILABLE",
                 403: "PERMISSION_DENIED",
                 404: "MODEL_UNAVAILABLE",
                 429: "QUOTA_OR_RATE_LIMIT",

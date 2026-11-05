@@ -35,17 +35,23 @@ def test_patch_repair_keeps_provider_and_bounded_context(monkeypatch):
             raise CheckError("QUOTA_OR_RATE_LIMIT", 429)
         assert len(payload["messages"][1]["content"]) < 10000
         assert payload["max_completion_tokens"] == 3072
-        fmt = payload["response_format"]
-        assert fmt["type"] == "json_schema" and fmt["json_schema"]["strict"] is True
-        assert set(fmt["json_schema"]["schema"]["required"]) == {
-            "action",
-            "detail",
-            "offset",
-            "edits",
-        }
+        assert payload["tool_choice"]["function"]["name"] == "next_action"
+        assert payload["tools"][0]["function"]["parameters"]["properties"]["action"]
         return {
             "choices": [
-                {"finish_reason": "stop", "message": {"content": json.dumps(next(outputs))}}
+                {
+                    "finish_reason": "tool_calls",
+                    "message": {
+                        "tool_calls": [
+                            {
+                                "function": {
+                                    "name": "next_action",
+                                    "arguments": json.dumps(next(outputs)),
+                                }
+                            }
+                        ]
+                    },
+                }
             ]
         }
 
@@ -146,12 +152,3 @@ def test_initial_missing_behavior_can_still_be_clarified(monkeypatch):
     )
     proposal = coding.InteractiveProposer(lambda _: True, lambda _: None)("Pon un control", {}, "")
     assert proposal.action == "clarify" and proposal.question == "¿Qué debe hacer el botón?"
-
-
-def test_strict_schema_covers_nested_fields_without_mutating_local_validation():
-    source = coding.Step.model_json_schema()
-    normalized = models.strict_schema(source)
-    assert normalized["additionalProperties"] is False
-    assert "default" not in normalized["properties"]["offset"]
-    assert set(normalized["$defs"]["Edit"]["required"]) == {"path", "before", "after"}
-    assert "default" in source["properties"]["offset"]

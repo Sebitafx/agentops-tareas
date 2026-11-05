@@ -47,29 +47,6 @@ class ProviderSession:
 SESSION: ContextVar[ProviderSession | None] = ContextVar("provider_session", default=None)
 
 
-def strict_schema(schema):
-    """Subset compartido: el validador local conserva todas las restricciones."""
-    if isinstance(schema, list):
-        return [strict_schema(item) for item in schema]
-    if not isinstance(schema, dict):
-        return schema
-    omitted = {
-        "default",
-        "title",
-        "format",
-        "minimum",
-        "maximum",
-        "minLength",
-        "maxLength",
-        "maxItems",
-    }
-    result = {key: strict_schema(value) for key, value in schema.items() if key not in omitted}
-    if result.get("type") == "object":
-        result["additionalProperties"] = False
-        result["required"] = list(result.get("properties", {}))
-    return result
-
-
 def conversation_enabled() -> bool:
     return bool(os.getenv("OPENAI_API_KEY") or os.getenv("GEMINI_API_KEY"))
 
@@ -186,22 +163,33 @@ def choose(
                     {"role": "system", "content": instruction},
                     {"role": "user", "content": user},
                 ],
-                "response_format": {
-                    "type": "json_schema",
-                    "json_schema": {
-                        "name": "next_action",
-                        "strict": True,
-                        "schema": strict_schema(schema),
-                    },
-                },
+                "tools": [
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": "next_action",
+                            "description": "Leer, buscar, editar o responder usando el contrato.",
+                            "parameters": schema,
+                        },
+                    }
+                ],
+                "tool_choice": {"type": "function", "function": {"name": "next_action"}},
+                "parallel_tool_calls": False,
                 "reasoning_effort": "low",
                 "max_completion_tokens": min(output_tokens, 3072),
             },
         )
-        choice = response["choices"][0]
-        if choice["finish_reason"] != "stop":
-            raise CheckError("INCOMPLETE_PROPOSAL")
-        decision = json.loads(choice["message"]["content"])
+        try:
+            choice = response["choices"][0]
+            calls = choice["message"].get("tool_calls", [])
+            if choice["finish_reason"] != "tool_calls" or len(calls) != 1:
+                raise CheckError("INVALID_TOOL_RESPONSE")
+            call = calls[0]["function"]
+            if call["name"] != "next_action":
+                raise CheckError("INVALID_TOOL_RESPONSE")
+            decision = json.loads(call["arguments"])
+        except (KeyError, IndexError, TypeError):
+            raise CheckError("INVALID_TOOL_RESPONSE") from None
         session.success("groq")
         return decision
     raise CheckError("NO_AVAILABLE_PROVIDER")

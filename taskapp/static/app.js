@@ -6,10 +6,10 @@ applyTheme();
 function applyTheme() {
   if (currentTheme === 'dark') {
     document.documentElement.setAttribute('data-theme', 'dark');
-    $("#theme-toggle").textContent = 'Modo claro';
+    $("#theme-toggle").textContent = '☀️';
   } else {
     document.documentElement.removeAttribute('data-theme');
-    $("#theme-toggle").textContent = 'Modo oscuro';
+    $("#theme-toggle").textContent = '🌙';
   }
   localStorage.setItem('theme', currentTheme);
 }

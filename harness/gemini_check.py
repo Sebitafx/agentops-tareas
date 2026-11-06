@@ -3,7 +3,7 @@
 import json
 import os
 
-from harness.provider_http import CheckError, validate_key
+from harness.provider_http import CheckError, split_keys, validate_key
 from harness.provider_http import request_json as provider_request_json
 
 DEFAULT_MODEL = "gemini-3.5-flash-lite"
@@ -63,10 +63,19 @@ def run_check(key: str, model: str) -> dict:
 
 
 def main() -> int:
+    keys = split_keys(os.getenv("GEMINI_API_KEY", ""))
     try:
-        result = run_check(
-            os.getenv("GEMINI_API_KEY", ""), os.getenv("GEMINI_MODEL", DEFAULT_MODEL)
-        )
+        if not keys:
+            raise CheckError("MISSING_OR_INVALID_API_KEY")
+        result: dict | None = None
+        # Cada tanque del pool se comprueba en vivo: una llave muerta es error de config.
+        for index, key in enumerate(keys):
+            if index:
+                print(
+                    json.dumps({"event": "key_rotated", "provider": "gemini", "index": index}),
+                    flush=True,
+                )
+            result = run_check(key, os.getenv("GEMINI_MODEL", DEFAULT_MODEL))
     except CheckError as exc:
         print(
             json.dumps({"status": "failed", "reason": exc.reason, "http_status": exc.http_status})

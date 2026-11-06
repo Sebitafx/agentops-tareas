@@ -3,7 +3,7 @@
 import json
 import os
 
-from harness.provider_http import CheckError, request_json, validate_key
+from harness.provider_http import CheckError, request_json, split_keys, validate_key
 
 DEFAULT_MODEL = "openai/gpt-oss-120b"
 ALLOWED_MODELS = frozenset({DEFAULT_MODEL})
@@ -68,8 +68,19 @@ def run_check(key: str, model: str) -> dict:
 
 
 def main() -> int:
+    keys = split_keys(os.getenv("GROQ_API_KEY", ""))
     try:
-        result = run_check(os.getenv("GROQ_API_KEY", ""), os.getenv("GROQ_MODEL", DEFAULT_MODEL))
+        if not keys:
+            raise CheckError("MISSING_OR_INVALID_API_KEY")
+        result: dict | None = None
+        # Cada tanque del pool se comprueba en vivo: una llave muerta es error de config.
+        for index, key in enumerate(keys):
+            if index:
+                print(
+                    json.dumps({"event": "key_rotated", "provider": "groq", "index": index}),
+                    flush=True,
+                )
+            result = run_check(key, os.getenv("GROQ_MODEL", DEFAULT_MODEL))
     except CheckError as exc:
         print(
             json.dumps(

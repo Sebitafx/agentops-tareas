@@ -8,7 +8,13 @@ from harness.code_proposer import SYSTEM, GroqProposer
 from harness.engine import Proposer
 from harness.gemini_check import ALLOWED_MODELS, DEFAULT_MODEL, request_json
 from harness.proposals import Proposal
-from harness.provider_http import CheckError, ProposalOutputLimit, validate_key
+from harness.provider_http import (
+    ROTATE_STATUSES,
+    CheckError,
+    ProposalOutputLimit,
+    split_keys,
+    validate_key,
+)
 
 
 def generate_json(key: str, system: str, context: str, max_tokens: int = 4096) -> str:
@@ -58,17 +64,47 @@ def visible_part(part: dict) -> str:
 class GeminiProposer(GroqProposer):
     def __init__(self, key: str, visible_paths: frozenset[str] | None = None) -> None:
         # Solo se comparte el constructor de contexto, no el transporte Groq.
-        validate_key(key)
+        # El env puede traer un pool separado por comas; cada tanque se valida.
+        self.keys = split_keys(key)
+        if not self.keys:
+            raise CheckError("MISSING_OR_INVALID_API_KEY")
+        for entry in self.keys:
+            validate_key(entry)
         if DEFAULT_MODEL not in ALLOWED_MODELS:
             raise CheckError("MODEL_NOT_ALLOWED")
-        self.key = key
+        self.key = self.keys[0]
         self.model = DEFAULT_MODEL
         self.visible_paths = visible_paths
 
     def __call__(self, request: str, base: Mapping[str, str], feedback: str) -> Proposal:
-        return Proposal.model_validate_json(
-            generate_json(self.key, SYSTEM, self.context(request, base, feedback), 8192)
-        )
+        context = self.context(request, base, feedback)
+        total = len(self.keys)
+        text: str | None = None
+        last: CheckError | None = None
+        for step in range(total):
+            try:
+                text = generate_json(self.keys[step], SYSTEM, context, 8192)
+                break
+            except CheckError as exc:
+                last = exc
+                if exc.http_status in ROTATE_STATUSES and step + 1 < total:
+                    print(
+                        json.dumps(
+                            {
+                                "event": "key_rotated",
+                                "provider": "gemini",
+                                "index": (step + 1) % total,
+                            }
+                        ),
+                        flush=True,
+                    )
+                    continue
+                raise
+        if text is None:
+            if last is not None:
+                raise last
+            raise CheckError("PROVIDER_UNAVAILABLE")
+        return Proposal.model_validate_json(text)
 
 
 class QuotaFallback:
@@ -101,8 +137,9 @@ class QuotaFallback:
 
 
 def with_gemini_fallback(primary: Proposer, paths: frozenset[str]) -> Proposer:
-    key = os.getenv("GEMINI_API_KEY", "")
-    if not key:
+    # El pool vive en el env separado por comas; el proposer rota entre tanques.
+    keys = split_keys(os.getenv("GEMINI_API_KEY", ""))
+    if not keys:
         return primary
     theme_files = {
         "taskapp/static/index.html",
@@ -121,5 +158,5 @@ def with_gemini_fallback(primary: Proposer, paths: frozenset[str]) -> Proposer:
             ),
             flush=True,
         )
-        return GeminiProposer(key, paths)
-    return QuotaFallback(primary, GeminiProposer(key, paths))
+        return GeminiProposer(",".join(keys), paths)
+    return QuotaFallback(primary, GeminiProposer(",".join(keys), paths))

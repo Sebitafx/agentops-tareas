@@ -17,6 +17,20 @@ ALLOWED_HOSTS = frozenset({"generativelanguage.googleapis.com", "api.openai.com"
 USER_AGENT = "AgentOps-Tareas/0.1 (+https://github.com/Sebitafx/agentops-tareas)"
 _last_groq_started: float | None = None
 
+# Fallos del nivel de la llave: cuota (429), llave muerta (401) o sin permiso (403).
+# Un pool gira ante cualquiera de ellos; sin pool, uno solo activa la cadena.
+ROTATE_STATUSES = frozenset({401, 403, 429})
+
+
+def split_keys(raw: str) -> list[str]:
+    """Llaves separadas por coma; vacias y bordes se descartan."""
+    return [part.strip() for part in raw.split(",") if part.strip()]
+
+
+def pool_keys(name: str) -> list[str]:
+    """Pool de un env de llaves; una sola llave se comporta igual que hoy."""
+    return split_keys(os.getenv(name) or "")
+
 
 class CheckError(Exception):
     def __init__(self, reason: str, http_status: int | None = None) -> None:

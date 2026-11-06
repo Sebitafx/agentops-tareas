@@ -120,3 +120,22 @@ def test_transport_rejects_unreviewed_destinations(monkeypatch, url):
     with pytest.raises(check.CheckError, match="ENDPOINT_NOT_ALLOWED"):
         provider_http.request_json(url, {"Authorization": "Bearer secret"})
     assert calls == []
+
+
+def test_preflight_validates_every_pool_key(monkeypatch, capsys):
+    calls = mock_api(monkeypatch, [catalog(), generation(), catalog(), generation()])
+    monkeypatch.setenv("GROQ_API_KEY", "private-one,private-two")
+    assert check.main() == 0
+    output = capsys.readouterr().out
+    events = [json.loads(line) for line in output.splitlines()]
+    rotated = [item for item in events if item.get("event") == "key_rotated"]
+    assert rotated == [{"event": "key_rotated", "provider": "groq", "index": 1}]
+    assert events[-1]["generation_confirmed"] is True
+    assert "private-one" not in output and "private-two" not in output
+    bearers = [call.get_header("Authorization") for call in calls]
+    assert bearers == [
+        "Bearer private-one",
+        "Bearer private-one",
+        "Bearer private-two",
+        "Bearer private-two",
+    ]

@@ -191,3 +191,59 @@ def test_contextual_review_fallback_keeps_line_validation(monkeypatch):
     recommendation["line"] = 999
     with pytest.raises(CheckError, match="INVALID_CONTEXTUAL_REVIEW"):
         review_push.contextual_review("primary-test", BASE, list(BASE))
+
+
+def test_gemini_proposer_pool_rotates_to_next_key(monkeypatch):
+    seen = []
+
+    def generate(key, system, context, max_tokens=8192):
+        seen.append(key)
+        if key == "k1":
+            raise CheckError("QUOTA_OR_RATE_LIMIT", 429)
+        return json.dumps(
+            {
+                "action": "change",
+                "summary": "Respaldo con tanque dos",
+                "files": [
+                    {
+                        "path": "taskapp/sample.py",
+                        "base_sha256": None,
+                        "content": "value = 2\n",
+                    }
+                ],
+            }
+        )
+
+    monkeypatch.setattr(gemini, "generate_json", generate)
+    proposal = gemini.GeminiProposer("k1,k2")("Demo", BASE, "")
+    assert proposal.summary == "Respaldo con tanque dos"
+    assert seen == ["k1", "k2"]
+
+
+def test_gemini_proposer_pool_exhausted_raises_last_reason(monkeypatch):
+    def generate(key, system, context, max_tokens=8192):
+        raise CheckError("AUTHENTICATION_FAILED", 401)
+
+    monkeypatch.setattr(gemini, "generate_json", generate)
+    with pytest.raises(CheckError, match="AUTHENTICATION_FAILED"):
+        gemini.GeminiProposer("k1,k2")("Demo", BASE, "")
+
+
+def test_contextual_review_exhausts_groq_pool_before_gemini_backup(monkeypatch):
+    calls = []
+
+    def transport(url, headers, payload):
+        calls.append(headers["Authorization"])
+        raise CheckError("QUOTA_OR_RATE_LIMIT", 429)
+
+    recommendation = {"rule": "NAME", "path": "taskapp/sample.py", "line": 1, "message": "Nombre"}
+    monkeypatch.setenv("GEMINI_API_KEY", "backup-tank")
+    monkeypatch.setattr(review_push, "request_json", transport)
+    monkeypatch.setattr(
+        review_push,
+        "generate_json",
+        lambda *_: json.dumps({"recommendations": [recommendation]}),
+    )
+    out = review_push.contextual_review("groq-one,groq-two", BASE, list(BASE))
+    assert calls == ["Bearer groq-one", "Bearer groq-two"]
+    assert out == [recommendation]

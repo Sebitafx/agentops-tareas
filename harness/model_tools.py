@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 
 from harness.gemini_proposer import generate_json
 from harness.groq_check import API_ROOT, DEFAULT_MODEL
-from harness.provider_http import CheckError, request_json
+from harness.provider_http import ROTATE_STATUSES, CheckError, pool_keys, request_json
 
 SOL = "gpt-6.1-sol"
 RECOVERABLE = {
@@ -21,9 +21,6 @@ RECOVERABLE = {
     "NETWORK_ERROR",
     "PROPOSAL_OUTPUT_LIMIT",
 }
-# Fallos del nivel de la llave: cuota (429), llave muerta (401) o sin permiso (403).
-# Un pool gira ante cualquiera de ellos; sin pool, uno solo activa la cadena.
-ROTATE_STATUSES = frozenset({401, 403, 429})
 
 
 @dataclass
@@ -46,12 +43,6 @@ class ProviderSession:
             return False
         self.unavailable.add(provider)
         return True
-
-
-def pool_keys(name: str) -> list[str]:
-    """Llaves separadas por coma; una sola llave se comporta igual que hoy."""
-    raw = os.getenv(name) or ""
-    return [part.strip() for part in raw.split(",") if part.strip()]
 
 
 SESSION: ContextVar[ProviderSession | None] = ContextVar("provider_session", default=None)

@@ -5,7 +5,14 @@ from collections.abc import Mapping
 
 from harness.groq_check import API_ROOT, DEFAULT_MODEL
 from harness.proposals import Proposal, digest
-from harness.provider_http import CheckError, ProposalOutputLimit, request_json, validate_key
+from harness.provider_http import (
+    ROTATE_STATUSES,
+    CheckError,
+    ProposalOutputLimit,
+    request_json,
+    split_keys,
+    validate_key,
+)
 
 MAX_CONTEXT_CHARS = 19000
 # Misma marca que usa el validador aislado; el diagnostico nunca se imputa como codigo.
@@ -67,11 +74,16 @@ class GroqProposer:
         model: str = DEFAULT_MODEL,
         visible_paths: frozenset[str] | None = None,
     ) -> None:
-        validate_key(key)
+        # El env puede traer un pool separado por comas; cada tanque se valida.
+        self.keys = split_keys(key)
+        if not self.keys:
+            raise CheckError("MISSING_OR_INVALID_API_KEY")
+        for entry in self.keys:
+            validate_key(entry)
         # Esta etapa usa el modelo realmente comprobado; no hay fallback silencioso.
         if model != DEFAULT_MODEL:
             raise CheckError("MODEL_NOT_ALLOWED")
-        self.key = key
+        self.key = self.keys[0]
         self.model = model
         self.visible_paths = visible_paths
 
@@ -113,22 +125,47 @@ class GroqProposer:
 
     def __call__(self, request: str, base: Mapping[str, str], feedback: str) -> Proposal:
         context = self.context(request, base, feedback)
-        result = request_json(
-            API_ROOT + "/chat/completions",
-            {"Authorization": "Bearer " + self.key},
-            {
-                "model": self.model,
-                "messages": [
-                    {"role": "system", "content": SYSTEM},
-                    {"role": "user", "content": context},
-                ],
-                "temperature": 0,
-                "max_completion_tokens": 4096,
-                "reasoning_effort": "low",
-                "response_format": {"type": "json_object"},
-                "stream": False,
-            },
-        )
+        total = len(self.keys)
+        result: dict | None = None
+        last: CheckError | None = None
+        for step in range(total):
+            try:
+                result = request_json(
+                    API_ROOT + "/chat/completions",
+                    {"Authorization": "Bearer " + self.keys[step]},
+                    {
+                        "model": self.model,
+                        "messages": [
+                            {"role": "system", "content": SYSTEM},
+                            {"role": "user", "content": context},
+                        ],
+                        "temperature": 0,
+                        "max_completion_tokens": 4096,
+                        "reasoning_effort": "low",
+                        "response_format": {"type": "json_object"},
+                        "stream": False,
+                    },
+                )
+                break
+            except CheckError as exc:
+                last = exc
+                if exc.http_status in ROTATE_STATUSES and step + 1 < total:
+                    print(
+                        json.dumps(
+                            {
+                                "event": "key_rotated",
+                                "provider": "groq",
+                                "index": (step + 1) % total,
+                            }
+                        ),
+                        flush=True,
+                    )
+                    continue
+                raise
+        if result is None:
+            if last is not None:
+                raise last
+            raise CheckError("NO_AVAILABLE_PROVIDER")
         if result.get("model") != self.model:
             raise CheckError("UNEXPECTED_GENERATION_MODEL")
         try:

@@ -128,6 +128,50 @@ def test_provider_quota_has_no_automatic_retry(monkeypatch):
     assert len(calls) == 1
 
 
+def test_groq_proposer_pool_rotates_to_next_key(monkeypatch):
+    calls = []
+    response = {
+        "action": "change",
+        "summary": "Cambio con tanque dos",
+        "files": [{"path": "taskapp/a.py", "base_sha256": digest("a=1"), "content": "a=2"}],
+    }
+
+    def transport(url, headers, payload):
+        calls.append(headers["Authorization"])
+        if calls[-1] == "Bearer tanque-uno":
+            raise CheckError("QUOTA_OR_RATE_LIMIT", 429)
+        return generated(json.dumps(response))
+
+    monkeypatch.setattr(code_proposer, "request_json", transport)
+    proposal = GroqProposer("tanque-uno,tanque-dos")("Demo", {"taskapp/a.py": "a=1"}, "")
+    assert proposal.summary == "Cambio con tanque dos"
+    assert calls == ["Bearer tanque-uno", "Bearer tanque-dos"]
+
+
+def test_groq_proposer_pool_rotates_on_bad_key(monkeypatch):
+    calls = []
+
+    def transport(url, headers, payload):
+        calls.append(headers["Authorization"])
+        if calls[-1] == "Bearer tanque-uno":
+            raise CheckError("AUTHENTICATION_FAILED", 401)
+        return generated('{"action":"clarify","summary":"Demo","question":"¿Demo?"}')
+
+    monkeypatch.setattr(code_proposer, "request_json", transport)
+    proposal = GroqProposer("tanque-uno,tanque-dos")("Demo", {}, "")
+    assert proposal.action == "clarify"
+    assert calls == ["Bearer tanque-uno", "Bearer tanque-dos"]
+
+
+def test_groq_proposer_pool_exhausted_lifts_the_last_reason(monkeypatch):
+    def transport(url, headers, payload):
+        raise CheckError("QUOTA_OR_RATE_LIMIT", 429)
+
+    monkeypatch.setattr(code_proposer, "request_json", transport)
+    with pytest.raises(CheckError, match="QUOTA_OR_RATE_LIMIT"):
+        GroqProposer("tanque-uno,tanque-dos")("Demo", {}, "")
+
+
 def test_preflight_missing_key_reports_safe_failure(monkeypatch, capsys):
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
     assert proposal_check.main() == 1

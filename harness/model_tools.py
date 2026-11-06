@@ -21,6 +21,9 @@ RECOVERABLE = {
     "NETWORK_ERROR",
     "PROPOSAL_OUTPUT_LIMIT",
 }
+# Fallos del nivel de la llave: cuota (429), llave muerta (401) o sin permiso (403).
+# Un pool gira ante cualquiera de ellos; sin pool, uno solo activa la cadena.
+ROTATE_STATUSES = frozenset({401, 403, 429})
 
 
 @dataclass
@@ -28,6 +31,7 @@ class ProviderSession:
     selected: str | None = None
     locked: bool = False
     unavailable: set[str] = field(default_factory=set)
+    key_cursor: dict[str, int] = field(default_factory=dict)
 
     def eligible(self, provider):
         return provider not in self.unavailable and (
@@ -42,6 +46,12 @@ class ProviderSession:
             return False
         self.unavailable.add(provider)
         return True
+
+
+def pool_keys(name: str) -> list[str]:
+    """Llaves separadas por coma; una sola llave se comporta igual que hoy."""
+    raw = os.getenv(name) or ""
+    return [part.strip() for part in raw.split(",") if part.strip()]
 
 
 SESSION: ContextVar[ProviderSession | None] = ContextVar("provider_session", default=None)
@@ -124,19 +134,15 @@ def choose(
             if exc.reason not in RECOVERABLE or not session.failed("openai"):
                 raise
     instruction = system + " Devuelve solo JSON con este esquema: " + json.dumps(schema)
-    gemini = os.getenv("GEMINI_API_KEY")
-    if gemini and session.eligible("gemini"):
+    gemini_keys = pool_keys("GEMINI_API_KEY")
+    if gemini_keys and session.eligible("gemini"):
         notice("Gemini")
         try:
-            for attempt in range(2):
-                try:
-                    decision = json.loads(generate_json(gemini, instruction, user, output_tokens))
-                    session.success("gemini")
-                    return decision
-                except CheckError as exc:
-                    if exc.http_status != 503 or attempt:
-                        raise
-                    time.sleep(2)
+            decision = json.loads(
+                _gemini_text(session, gemini_keys, instruction, user, output_tokens)
+            )
+            session.success("gemini")
+            return decision
         except CheckError as exc:
             print(
                 json.dumps(
@@ -151,45 +157,125 @@ def choose(
             )
             if exc.reason not in RECOVERABLE or not session.failed("gemini"):
                 raise
-    groq = os.getenv("GROQ_API_KEY")
-    if groq and session.eligible("groq"):
+    groq_keys = pool_keys("GROQ_API_KEY")
+    if groq_keys and session.eligible("groq"):
         notice("Groq")
-        response = request_json(
-            API_ROOT + "/chat/completions",
-            {"Authorization": "Bearer " + groq},
-            {
-                "model": DEFAULT_MODEL,
-                "messages": [
-                    {"role": "system", "content": instruction},
-                    {"role": "user", "content": user},
-                ],
-                "tools": [
-                    {
-                        "type": "function",
-                        "function": {
-                            "name": "next_action",
-                            "description": "Leer, buscar, editar o responder usando el contrato.",
-                            "parameters": schema,
-                        },
-                    }
-                ],
-                "tool_choice": {"type": "function", "function": {"name": "next_action"}},
-                "parallel_tool_calls": False,
-                "reasoning_effort": "low",
-                "max_completion_tokens": min(output_tokens, 3072),
-            },
+        total = len(groq_keys)
+        last: CheckError | None = None
+        for step in range(total):
+            index = (session.key_cursor.get("groq", 0) + step) % total
+            try:
+                decision = _groq_decision(
+                    groq_keys[index], instruction, user, schema, output_tokens
+                )
+                session.success("groq")
+                session.key_cursor["groq"] = index
+                return decision
+            except CheckError as exc:
+                last = exc
+                if exc.http_status not in ROTATE_STATUSES or step + 1 >= total:
+                    break
+                print(
+                    json.dumps(
+                        {
+                            "event": "key_rotated",
+                            "provider": "groq",
+                            "index": (index + 1) % total,
+                        }
+                    ),
+                    flush=True,
+                )
+        print(
+            json.dumps(
+                {
+                    "event": "provider_attempt_failed",
+                    "provider": "groq",
+                    "reason": last.reason if last else "PROVIDER_UNAVAILABLE",
+                    "http_status": last.http_status if last else None,
+                }
+            ),
+            flush=True,
         )
-        try:
-            choice = response["choices"][0]
-            calls = choice["message"].get("tool_calls", [])
-            if choice["finish_reason"] != "tool_calls" or len(calls) != 1:
-                raise CheckError("INVALID_TOOL_RESPONSE")
-            call = calls[0]["function"]
-            if call["name"] != "next_action":
-                raise CheckError("INVALID_TOOL_RESPONSE")
-            decision = json.loads(call["arguments"])
-        except (KeyError, IndexError, TypeError):
-            raise CheckError("INVALID_TOOL_RESPONSE") from None
-        session.success("groq")
-        return decision
+        if last is None:
+            raise CheckError("NO_AVAILABLE_PROVIDER")
+        session.failed("groq")
+        raise last
     raise CheckError("NO_AVAILABLE_PROVIDER")
+
+
+def _gemini_text(
+    session: ProviderSession, keys: list[str], instruction: str, user: str, output_tokens: int
+) -> str:
+    """Primer tanque vivo del pool Gemini; gira al siguiente cuando un 429 lo seca."""
+    total = len(keys)
+    last: CheckError | None = None
+    for step in range(total):
+        index = (session.key_cursor.get("gemini", 0) + step) % total
+        try:
+            for attempt in range(2):
+                try:
+                    text = generate_json(keys[index], instruction, user, output_tokens)
+                    session.key_cursor["gemini"] = index
+                    return text
+                except CheckError as exc:
+                    if exc.http_status != 503 or attempt:
+                        raise
+                    time.sleep(2)
+        except CheckError as exc:
+            last = exc
+            if exc.http_status in ROTATE_STATUSES and step + 1 < total:
+                print(
+                    json.dumps(
+                        {
+                            "event": "key_rotated",
+                            "provider": "gemini",
+                            "index": (index + 1) % total,
+                        }
+                    ),
+                    flush=True,
+                )
+                continue
+            raise
+    if last is not None:
+        raise last
+    raise CheckError("PROVIDER_UNAVAILABLE")
+
+
+def _groq_decision(key: str, instruction: str, user: str, schema: dict, output_tokens: int) -> dict:
+    response = request_json(
+        API_ROOT + "/chat/completions",
+        {"Authorization": "Bearer " + key},
+        {
+            "model": DEFAULT_MODEL,
+            "messages": [
+                {"role": "system", "content": instruction},
+                {"role": "user", "content": user},
+            ],
+            "tools": [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "next_action",
+                        "description": "Leer, buscar, editar o responder usando el contrato.",
+                        "parameters": schema,
+                    },
+                }
+            ],
+            "tool_choice": {"type": "function", "function": {"name": "next_action"}},
+            "parallel_tool_calls": False,
+            "reasoning_effort": "low",
+            "max_completion_tokens": min(output_tokens, 3072),
+        },
+    )
+    try:
+        choice = response["choices"][0]
+        calls = choice["message"].get("tool_calls", [])
+        if choice["finish_reason"] != "tool_calls" or len(calls) != 1:
+            raise CheckError("INVALID_TOOL_RESPONSE")
+        call = calls[0]["function"]
+        if call["name"] != "next_action":
+            raise CheckError("INVALID_TOOL_RESPONSE")
+        decision = json.loads(call["arguments"])
+    except (KeyError, IndexError, TypeError):
+        raise CheckError("INVALID_TOOL_RESPONSE") from None
+    return decision

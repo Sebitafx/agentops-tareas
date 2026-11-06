@@ -183,3 +183,128 @@ def test_multiple_edits_are_draft_until_finish(monkeypatch):
 
     assert apply_to_snapshot(proposal, base) == {"taskapp/a.html": "new", "taskapp/a.css": "black"}
     assert observed == [[], ["taskapp/a.html"], ["taskapp/a.html", "taskapp/a.css"]]
+
+
+def test_gemini_pool_rotates_to_next_key_on_429(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("GEMINI_API_KEY", "k1,k2")
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    seen = []
+
+    def generate(key, system, context, max_tokens=4096):
+        seen.append(key)
+        if key == "k1":
+            raise CheckError("QUOTA_OR_RATE_LIMIT", 429)
+        return json.dumps({"action": "refuse", "detail": "no"})
+
+    monkeypatch.setattr(models, "generate_json", generate)
+    decision = models.choose("sys", {}, {}, lambda _: True, 100)
+    assert seen == ["k1", "k2"]
+    assert decision["action"] == "refuse"
+
+
+def test_groq_pool_rotates_to_next_key_on_429(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.setenv("GROQ_API_KEY", "g1,g2")
+    calls = []
+
+    def request_json(url, headers, payload=None):
+        calls.append(headers["Authorization"])
+        if calls[-1] == "Bearer g1":
+            raise CheckError("QUOTA_OR_RATE_LIMIT", 429)
+        return {
+            "choices": [
+                {
+                    "finish_reason": "tool_calls",
+                    "message": {
+                        "tool_calls": [
+                            {
+                                "function": {
+                                    "name": "next_action",
+                                    "arguments": json.dumps({"action": "refuse", "detail": "no"}),
+                                }
+                            }
+                        ]
+                    },
+                }
+            ]
+        }
+
+    monkeypatch.setattr(models, "request_json", request_json)
+    decision = models.choose("sys", {}, {}, lambda _: True, 100)
+    assert calls == ["Bearer g1", "Bearer g2"]
+    assert decision["action"] == "refuse"
+
+
+def test_groq_pool_exhausted_fails_and_marks_session(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.setenv("GROQ_API_KEY", "g1,g2")
+
+    def request_json(url, headers, payload=None):
+        raise CheckError("QUOTA_OR_RATE_LIMIT", 429)
+
+    monkeypatch.setattr(models, "request_json", request_json)
+    session = models.ProviderSession()
+    token = models.SESSION.set(session)
+    try:
+        with pytest.raises(CheckError, match="QUOTA_OR_RATE_LIMIT"):
+            models.choose("sys", {}, {}, lambda _: True, 100)
+        assert "groq" in session.unavailable
+        with pytest.raises(CheckError, match="NO_AVAILABLE_PROVIDER"):
+            models.choose("sys", {}, {}, lambda _: True, 100)
+    finally:
+        models.SESSION.reset(token)
+
+
+def test_gemini_pool_rotates_on_bad_key(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("GEMINI_API_KEY", "k1,k2")
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    seen = []
+
+    def generate(key, system, context, max_tokens=4096):
+        seen.append(key)
+        if key == "k1":
+            raise CheckError("AUTHENTICATION_FAILED", 401)
+        return json.dumps({"action": "refuse", "detail": "no"})
+
+    monkeypatch.setattr(models, "generate_json", generate)
+    decision = models.choose("sys", {}, {}, lambda _: True, 100)
+    assert seen == ["k1", "k2"]
+    assert decision["action"] == "refuse"
+
+
+def test_groq_pool_rotates_on_bad_key(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.setenv("GROQ_API_KEY", "g1,g2")
+    calls = []
+
+    def request_json(url, headers, payload=None):
+        calls.append(headers["Authorization"])
+        if calls[-1] == "Bearer g1":
+            raise CheckError("AUTHENTICATION_FAILED", 401)
+        return {
+            "choices": [
+                {
+                    "finish_reason": "tool_calls",
+                    "message": {
+                        "tool_calls": [
+                            {
+                                "function": {
+                                    "name": "next_action",
+                                    "arguments": json.dumps({"action": "refuse", "detail": "no"}),
+                                }
+                            }
+                        ]
+                    },
+                }
+            ]
+        }
+
+    monkeypatch.setattr(models, "request_json", request_json)
+    decision = models.choose("sys", {}, {}, lambda _: True, 100)
+    assert calls == ["Bearer g1", "Bearer g2"]
+    assert decision["action"] == "refuse"

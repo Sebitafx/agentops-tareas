@@ -101,9 +101,12 @@ class QuotaFallback:
 
 
 def with_gemini_fallback(primary: Proposer, paths: frozenset[str]) -> Proposer:
-    key = os.getenv("GEMINI_API_KEY", "")
-    if not key:
+    # El pool de llaves vive en el env separado por comas; este proposer usa el primer tanque.
+    raw = os.getenv("GEMINI_API_KEY", "")
+    keys = [part.strip() for part in raw.split(",") if part.strip()]
+    if not keys:
         return primary
+    key = keys[0]
     theme_files = {
         "taskapp/static/index.html",
         "taskapp/static/app.js",

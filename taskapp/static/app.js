@@ -103,6 +103,19 @@ function taskCard(task) {
   return card;
 }
 
+async function updatePendingCounter() {
+  try {
+    const tasks = await api("/api/tasks?status=pending");
+    const count = tasks.length;
+    const counterText = $("#pending-count-text");
+    if (counterText) {
+      counterText.textContent = `${count} ${count === 1 ? "pendiente" : "pendientes"}`;
+    }
+  } catch (e) {
+    // Silently ignore counter update errors
+  }
+}
+
 async function reload() {
   const sequence = ++loadSequence;
   $("#error").hidden = true;
@@ -112,6 +125,7 @@ async function reload() {
     $("#task-list").replaceChildren(...tasks.map(taskCard));
     $("#empty").hidden = tasks.length !== 0;
     $("#count").textContent = `${tasks.length} ${tasks.length === 1 ? "tarea" : "tareas"} en esta vista`;
+    await updatePendingCounter();
   } catch (error) { if (sequence === loadSequence) showError(error); }
 }
 
